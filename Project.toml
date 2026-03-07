@@ -1,0 +1,15 @@
+name = "CEGIS"
+uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+authors = ["Herb.jl Contributors"]
+version = "0.1.0"
+
+[deps]
+HerbCore         = "2b23ba43-8213-43cb-b5ea-38c12b45bd45"
+HerbGrammar      = "4ef9e186-2fe5-4b24-8de7-9f7291f24af7"
+HerbConstraints  = "1963bd15-d9b2-4dfd-b1e8-cbfa9e2ef028"
+HerbInterpret    = "c8b4e611-fdcc-4b7f-bf6c-585c7a1a8fc4"
+HerbSearch       = "3008d8c1-9176-4c99-8e14-96e3abbe9e51"
+HerbSpecification = "6d54aada-062f-46d8-85a4-d6ce9d1f5c64"
+
+[compat]
+julia = "1.9"
