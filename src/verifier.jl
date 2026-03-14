@@ -62,6 +62,14 @@ in order and returns the first failing one.
 """
 struct IOExampleOracle{T <: AbstractVector{<:IOExample}} <: AbstractOracle
     examples :: T
+    mod      :: Module
+end
+
+function IOExampleOracle(
+    examples :: AbstractVector{<:IOExample};
+    mod      :: Module = Main,
+)
+    return IOExampleOracle(examples, mod)
 end
 
 """
@@ -94,8 +102,11 @@ function extract_counterexample(
     problem   :: CEGISProblem,
     candidate :: RuleNode,
 ) :: Union{Counterexample, Nothing}
+    symboltable = grammar2symboltable(problem.grammar, oracle.mod)
+    expr = rulenode2expr(candidate, problem.grammar)
+
     for ex in oracle.examples
-        actual_output = execute_on_input(problem.grammar, candidate, ex.in)
+        actual_output = execute_on_input(symboltable, expr, ex.in)
         if actual_output != ex.out
             return Counterexample(ex.in, ex.out, actual_output)
         end

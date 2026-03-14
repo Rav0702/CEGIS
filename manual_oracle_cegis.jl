@@ -61,7 +61,7 @@ xs = collect(-3:12)
 examples = IOExample[IOExample(Dict{Symbol,Any}(:x => x), target(x)) for x in xs]
 oracle = IOExampleOracle(examples)
 
-result = synth_with_oracle(
+synth_out = synth_with_oracle(
     grammar,
     start_symbol,
     oracle;
@@ -69,10 +69,13 @@ result = synth_with_oracle(
     max_depth = 6,
     max_enumerations = 200_000,
 )
+result = synth_out.result
+satisfied_examples = synth_out.satisfied_examples
 
 println("Status: $(result.status)")
 println("Iterations: $(result.iterations)")
 println("Counterexamples used: $(length(result.counterexamples))")
+println("Best satisfied examples: $satisfied_examples")
 
 if result.program !== nothing
     println("Program: $(rulenode2expr(result.program, grammar))")

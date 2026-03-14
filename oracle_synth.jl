@@ -71,9 +71,29 @@ function synth_with_oracle(
 
     problem = Problem(IOExample[])
     counterexamples = Counterexample[]
+    global_best_program = nothing
+    global_best_satisfied = 0
+
+    count_satisfied_examples(candidate_program::RuleNode)::Int = begin
+        isempty(problem.spec) && return 0
+        expr = rulenode2expr(candidate_program, grammar)
+        _, score = HerbSearch.evaluate(
+            problem,
+            expr,
+            grammar2symboltable(grammar, mod),
+            shortcircuit = false,
+            allow_evaluation_errors = allow_evaluation_errors,
+        )
+        return round(Int, score * length(problem.spec))
+    end
 
     for iter in 1:max_iterations
-        time() - start_time > max_time && return CEGISResult(CEGIS.cegis_timeout, nothing, iter - 1, counterexamples)
+        if time() - start_time > max_time
+            return (
+                result = CEGISResult(CEGIS.cegis_timeout, global_best_program, iter - 1, counterexamples),
+                satisfied_examples = global_best_satisfied,
+            )
+        end
 
         solver = GenericSolver(grammar, start_symbol; max_depth=max_depth)
         uniform_solver_ref = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
@@ -86,6 +106,7 @@ function synth_with_oracle(
         best_score = 0
         best_program = nothing
         found_counterexample = false
+        println("[iter=$iter]")
 
         for (i, candidate_program) in enumerate(iterator)
             expr = rulenode2expr(candidate_program, grammar)
@@ -108,6 +129,12 @@ function synth_with_oracle(
                 candidate_expr = rulenode2expr(candidate_program, grammar)
                 println("[iter=$iter] candidate: $candidate_expr")
 
+                current_satisfied = count_satisfied_examples(candidate_program)
+                if current_satisfied >= global_best_satisfied
+                    global_best_satisfied = current_satisfied
+                    global_best_program = candidate_program
+                end
+
                 oracle_problem = CEGISProblem(
                     grammar,
                     start_symbol,
@@ -117,7 +144,10 @@ function synth_with_oracle(
                 cx = extract_counterexample(oracle, oracle_problem, candidate_program)
 
                 if cx === nothing
-                    return CEGISResult(CEGIS.cegis_success, candidate_program, iter, counterexamples)
+                    return (
+                        result = CEGISResult(CEGIS.cegis_success, candidate_program, iter, counterexamples),
+                        satisfied_examples = current_satisfied,
+                    )
                 end
 
                 push!(counterexamples, cx)
@@ -130,6 +160,12 @@ function synth_with_oracle(
             elseif score >= best_score
                 best_score = score
                 best_program = freeze_state(candidate_program)
+
+                current_satisfied = count_satisfied_examples(best_program)
+                if current_satisfied >= global_best_satisfied
+                    global_best_satisfied = current_satisfied
+                    global_best_program = best_program
+                end
             end
 
             if i > max_enumerations || time() - local_round_start > max_time
@@ -143,11 +179,17 @@ function synth_with_oracle(
         end
 
         if best_program === nothing
-            return CEGISResult(CEGIS.cegis_failure, nothing, iter, counterexamples)
+            return (
+                result = CEGISResult(CEGIS.cegis_failure, global_best_program, iter, counterexamples),
+                satisfied_examples = global_best_satisfied,
+            )
         end
     end
 
-    return CEGISResult(CEGIS.cegis_timeout, nothing, max_iterations, counterexamples)
+    return (
+        result = CEGISResult(CEGIS.cegis_timeout, global_best_program, max_iterations, counterexamples),
+        satisfied_examples = global_best_satisfied,
+    )
 end
 
 # -----------------------------------------------------------------------------
@@ -175,7 +217,9 @@ if abspath(PROGRAM_FILE) == @__FILE__
 
     oracle = IOExampleOracle(held_out_examples)
 
-    result = synth_with_oracle(grammar, start_symbol, oracle; max_iterations = 20, max_depth = 5)
+    synth_out = synth_with_oracle(grammar, start_symbol, oracle; max_iterations = 20, max_depth = 5)
+    result = synth_out.result
+    satisfied_examples = synth_out.satisfied_examples
 
     if result.status == CEGIS.cegis_success
         println("Success in $(result.iterations) iteration(s)")
@@ -187,4 +231,5 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
 
     println("Counterexamples collected: $(length(result.counterexamples))")
+    println("Best satisfied examples: $satisfied_examples")
 end
