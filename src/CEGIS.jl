@@ -58,9 +58,12 @@ export
     Counterexample,
     VerificationResult,
     VerificationStatus,
+    AbstractOracle,
+    IOExampleOracle,
 
     # Main entry point
     run_cegis,
+    run_ioexample_cegis,
 
     # Synthesizer
     synthesize,
@@ -69,6 +72,7 @@ export
 
     # Verifier
     verify,
+    extract_counterexample,
     oracle_from_examples,
     oracle_from_smt,
 

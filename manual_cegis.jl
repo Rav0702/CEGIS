@@ -32,8 +32,8 @@ using HerbCore           # RuleNode, AbstractRuleNode
 using HerbGrammar        # @csgrammar, rulenode2expr, addconstraint!
 using HerbConstraints    # Forbidden
 using HerbInterpret      # execute_on_input
-using HerbSearch         # BFSIterator, synth, optimal_program
-using HerbSpecification  # Problem, IOExample
+using HerbSearch         # BFSIterator, GenericSolver, freeze_state
+using HerbSpecification  # IOExample
 
 # 1. Grammar
 
@@ -63,12 +63,17 @@ examples = IOExample[
 # 3. Helper: synthesize
 
 function do_synthesize(grammar, start_symbol, examples; max_depth=5, max_enumerations=50_000)
-    problem  = Problem(examples)
-    iterator = BFSIterator(grammar, start_symbol; max_depth=max_depth)
-    result   = synth(problem, iterator; max_enumerations=max_enumerations)
-    result === nothing && return nothing
-    (program, status) = result
-    return status == optimal_program ? program : nothing
+    solver   = GenericSolver(grammar, start_symbol; max_depth=max_depth)
+    ref      = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
+    iterator = BFSIterator(; solver=solver, uniform_solver_ref=ref)
+    symtab   = grammar2symboltable(grammar)
+    for (i, candidate) in enumerate(iterator)
+        i > max_enumerations && break
+        expr = rulenode2expr(candidate, grammar)
+        sat  = all(ex -> execute_on_input(symtab, expr, ex.in) == ex.out, examples)
+        sat && return freeze_state(candidate)
+    end
+    return nothing
 end
 
 # 4. Helper: parse a number typed by the user

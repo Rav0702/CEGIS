@@ -162,6 +162,73 @@ Participants
 - Calls : `update_problem_with_counterexample!` (synthesizer.jl)
 - Returns: `CEGISResult`                     (types.jl)
 """
+
+"""
+    run_ioexample_cegis(grammar, start_symbol, oracle; ...) -> CEGISResult
+
+Concrete CEGIS loop driven by an `IOExampleOracle`.
+
+The loop starts with an empty synthesis problem (`Problem(IOExample[])`), then:
+1. Synthesizes a candidate from the current examples.
+2. Uses `extract_counterexample` to find the first failing held-out example.
+3. Adds that counterexample as a new `IOExample` to the synthesis problem.
+4. Repeats until verified or budget is exhausted.
+"""
+function run_ioexample_cegis(
+    grammar       :: AbstractGrammar,
+    start_symbol  :: Symbol,
+    oracle        :: IOExampleOracle;
+    max_iterations   :: Int = 100,
+    max_depth        :: Int = 5,
+    max_enumerations :: Int = 50_000,
+    max_time         :: Float64 = Inf,
+    verbose          :: Bool = false,
+) :: CEGISResult
+    start_time = time()
+    spec = IOExample[]
+    problem = Problem(spec)
+    counterexamples = Counterexample[]
+
+    for iteration in 1:max_iterations
+        if time() - start_time > max_time
+            return CEGISResult(cegis_timeout, nothing, iteration - 1, counterexamples)
+        end
+
+        solver = GenericSolver(grammar, start_symbol; max_depth = max_depth)
+        uniform_solver_ref = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
+        iterator = BFSIterator(; solver = solver, uniform_solver_ref = uniform_solver_ref)
+
+        synth_result = HerbSearch.synth(problem, iterator; max_enumerations = max_enumerations)
+        if synth_result === nothing || synth_result[1] === nothing
+            verbose && @info "[$iteration] No candidate found."
+            return CEGISResult(cegis_failure, nothing, iteration, counterexamples)
+        end
+
+        candidate, _ = synth_result
+        verbose && @info "[$iteration] Candidate: $(rulenode2expr(candidate, grammar))"
+
+        oracle_problem = CEGISProblem(
+            grammar,
+            start_symbol,
+            problem.spec,
+            (_candidate, _grammar) -> VerificationResult(verified, nothing),
+        )
+        cx = extract_counterexample(oracle, oracle_problem, candidate)
+
+        if cx === nothing
+            verbose && @info "[$iteration] Verified: no counterexample found."
+            return CEGISResult(cegis_success, candidate, iteration, counterexamples)
+        end
+
+        push!(counterexamples, cx)
+        push!(problem.spec, IOExample(cx.input, cx.expected_output))
+
+        verbose && @info "[$iteration] Added counterexample; spec size=$(length(problem.spec))."
+    end
+
+    return CEGISResult(cegis_timeout, nothing, max_iterations, counterexamples)
+end
+
 function run_cegis(
     problem  :: CEGISProblem;
     verbose  :: Bool = false,

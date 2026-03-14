@@ -42,6 +42,68 @@ Key Herb types involved
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
+    abstract type AbstractOracle end
+
+Parent type for all verifier oracles used by CEGIS.
+
+Concrete oracles should subtype `AbstractOracle` and implement
+[`extract_counterexample`](@ref).
+"""
+abstract type AbstractOracle end
+
+"""
+    struct IOExampleOracle <: AbstractOracle
+
+Oracle backed by a fixed list of input/output examples.
+
+The constructor takes `examples::AbstractVector{<:IOExample}`. During
+counterexample extraction, the oracle evaluates the candidate on each example
+in order and returns the first failing one.
+"""
+struct IOExampleOracle{T <: AbstractVector{<:IOExample}} <: AbstractOracle
+    examples :: T
+end
+
+"""
+    extract_counterexample(oracle, problem, candidate) -> Union{Counterexample, Nothing}
+
+Oracle interface method.
+
+Given a synthesis `problem` and a `candidate` program, return:
+- `Counterexample` when the candidate is invalid.
+- `nothing` when no counterexample is found.
+
+Concrete `AbstractOracle` subtypes must implement this method.
+"""
+function extract_counterexample(
+    oracle    :: AbstractOracle,
+    problem,
+    candidate,
+) :: Union{Counterexample, Nothing}
+    error("extract_counterexample is not implemented for $(typeof(oracle)).")
+end
+
+"""
+    extract_counterexample(oracle::IOExampleOracle, problem::CEGISProblem, candidate::RuleNode)
+
+Return the first `Counterexample` induced by `oracle.examples`, or `nothing` if
+the candidate matches all examples.
+"""
+function extract_counterexample(
+    oracle    :: IOExampleOracle,
+    problem   :: CEGISProblem,
+    candidate :: RuleNode,
+) :: Union{Counterexample, Nothing}
+    for ex in oracle.examples
+        actual_output = execute_on_input(problem.grammar, candidate, ex.in)
+        if actual_output != ex.out
+            return Counterexample(ex.in, ex.out, actual_output)
+        end
+    end
+    return nothing
+end
+
+"""
     verify(candidate, grammar, oracle) -> VerificationResult
 
 **[NOT IMPLEMENTED]**

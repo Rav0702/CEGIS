@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "2623a6cceee8a778edbb4da8bbdaf9170ece4e5f"
+project_hash = "e2e254c47afdcf4d64afb12d762080a8c7a182ce"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -24,10 +24,21 @@ git-tree-sha1 = "4ec6b48702dacc5994a835c1189831755e4e76ef"
 uuid = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
 version = "2.2.0"
 
+[[deps.CEnum]]
+git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
+uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
+version = "0.5.0"
+
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.3.0+1"
+
+[[deps.ConflictAnalysis]]
+deps = ["DataStructures", "DocStringExtensions", "HerbConstraints", "HerbCore", "HerbGrammar", "HerbInterpret", "HerbSpecification", "Satisfiability", "Z3"]
+path = "C:\\Users\\rafal\\.julia\\dev\\ConflictAnalysis.jl"
+uuid = "46d8c867-898e-41d3-9160-29f023e63481"
+version = "0.1.0"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -40,6 +51,11 @@ git-tree-sha1 = "e357641bb3e0638d353c4b29ea0e40ea644066a6"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.19.3"
 
+[[deps.Dates]]
+deps = ["Printf"]
+uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+version = "1.11.0"
+
 [[deps.DocStringExtensions]]
 git-tree-sha1 = "7442a5dfe1ebb773c29cc2962a8980f47221d76c"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
@@ -50,17 +66,16 @@ git-tree-sha1 = "27415f162e6028e81c72b82ef756bf321213b6ec"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
 version = "0.1.10"
 
+[[deps.GMP_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
+version = "6.3.0+2"
+
 [[deps.HerbConstraints]]
-deps = ["DataStructures", "DocStringExtensions", "HerbCore", "HerbGrammar", "MLStyle", "TimerOutputs"]
+deps = ["DataStructures", "HerbCore", "HerbGrammar", "MLStyle", "TimerOutputs"]
 path = "C:\\Users\\rafal\\.julia\\dev\\HerbConstraints"
 uuid = "1fa96474-3206-4513-b4fa-23913f296dfc"
-version = "1.1.2"
-
-    [deps.HerbConstraints.extensions]
-    ASPExt = "Clingo_jll"
-
-    [deps.HerbConstraints.weakdeps]
-    Clingo_jll = "e1d4ad0e-dc8b-5d2d-8155-e9a55b531f08"
+version = "1.1.1"
 
 [[deps.HerbCore]]
 deps = ["AbstractTrees", "MacroTools", "StyledStrings"]
@@ -84,13 +99,15 @@ version = "1.0.1"
 deps = ["DataStructures", "DocStringExtensions", "HerbConstraints", "HerbCore", "HerbGrammar", "HerbInterpret", "HerbSpecification", "MLStyle", "Random", "StatsBase", "TimerOutputs"]
 path = "C:\\Users\\rafal\\.julia\\dev\\HerbSearch"
 uuid = "3008d8e8-f9aa-438a-92ed-26e9c7b4829f"
-version = "1.0.2"
+version = "1.0.0"
 
     [deps.HerbSearch.extensions]
+    ConflictAnalysisExt = "Satisfiability"
     DivideAndConquerExt = "DecisionTree"
 
     [deps.HerbSearch.weakdeps]
     DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
+    Satisfiability = "160ab843-0bc6-4ba4-9585-b7478b70f443"
 
 [[deps.HerbSpecification]]
 deps = ["AutoHashEquals"]
@@ -102,6 +119,12 @@ version = "1.0.0"
 git-tree-sha1 = "b2d91fe939cae05960e760110b328288867b5758"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.6"
+
+[[deps.JLLWrappers]]
+deps = ["Artifacts", "Preferences"]
+git-tree-sha1 = "0533e564aae234aff59ab625543145446d8b6ec2"
+uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
+version = "1.7.1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -127,6 +150,10 @@ version = "0.3.29"
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
     ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
     InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
+
+[[deps.Logging]]
+uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+version = "1.11.0"
 
 [[deps.MLStyle]]
 git-tree-sha1 = "bc38dff0548128765760c79eb7388a4b37fae2c8"
@@ -154,6 +181,12 @@ git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.1"
 
+[[deps.Preferences]]
+deps = ["TOML"]
+git-tree-sha1 = "8b770b60760d4451834fe79dd483e318eee709c4"
+uuid = "21216c6a-2e73-6563-6e65-726566657250"
+version = "1.5.2"
+
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -178,6 +211,12 @@ version = "0.5.17"
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
+
+[[deps.Satisfiability]]
+deps = ["Logging", "Unicode", "z3_jll"]
+git-tree-sha1 = "d82a71782d43eb054f489c78b714f5d9b2a9eff4"
+uuid = "160ab843-0bc6-4ba4-9585-b7478b70f443"
+version = "0.2.0"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -225,6 +264,11 @@ deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
 version = "7.8.3+2"
 
+[[deps.TOML]]
+deps = ["Dates"]
+uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+version = "1.0.3"
+
 [[deps.TimerOutputs]]
 deps = ["ExprTools", "Printf"]
 git-tree-sha1 = "3748bd928e68c7c346b52125cf41fff0de6937d0"
@@ -241,7 +285,25 @@ version = "0.5.29"
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
 
+[[deps.Z3]]
+deps = ["CEnum", "z3_jll"]
+git-tree-sha1 = "709e5cd1b1eb6cbbacca6185fd8ade9d0b3b650e"
+uuid = "06b161dc-0161-11ea-0f74-41f836f4024b"
+version = "1.0.4"
+
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
 version = "5.15.0+0"
+
+[[deps.libcxxwrap_julia_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "a0b6eb05dde4ededa688ecf05e33caa5bffd42a5"
+uuid = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
+version = "0.14.9+0"
+
+[[deps.z3_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "GMP_jll", "JLLWrappers", "Libdl", "libcxxwrap_julia_jll"]
+git-tree-sha1 = "4e2c8f811e46a40416778b2057a562582d9221f4"
+uuid = "1bc4e1ec-7839-5212-8f2f-0d16b7bd09bc"
+version = "4.16.0+0"
