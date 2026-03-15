@@ -1,0 +1,14 @@
+# Local Julia script environment (machine-specific path deps)
+.script_env/
+Manifest.toml
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
