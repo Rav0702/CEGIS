@@ -195,8 +195,7 @@ function run_ioexample_cegis(
         end
 
         solver = GenericSolver(grammar, start_symbol; max_depth = max_depth)
-        uniform_solver_ref = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
-        iterator = BFSIterator(; solver = solver, uniform_solver_ref = uniform_solver_ref)
+        iterator = BFSIterator(; solver = solver, max_depth = max_depth)
 
         synth_result = HerbSearch.synth(problem, iterator; max_enumerations = max_enumerations)
         if synth_result === nothing || synth_result[1] === nothing

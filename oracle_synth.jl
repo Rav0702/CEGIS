@@ -77,7 +77,7 @@ function synth_with_oracle(
     count_satisfied_examples(candidate_program::RuleNode)::Int = begin
         isempty(problem.spec) && return 0
         expr = rulenode2expr(candidate_program, grammar)
-        _, score = HerbSearch.evaluate(
+        score = HerbSearch.evaluate(
             problem,
             expr,
             grammar2symboltable(grammar, mod),
@@ -96,8 +96,7 @@ function synth_with_oracle(
         end
 
         solver = GenericSolver(grammar, start_symbol; max_depth=max_depth)
-        uniform_solver_ref = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
-        iterator = BFSIterator(; solver=solver, uniform_solver_ref=uniform_solver_ref)
+        iterator = BFSIterator(; solver=solver, max_depth=max_depth)
 
         # ---- Copied synth core (search_procedure.jl) ----
         local_round_start = time()
@@ -114,14 +113,13 @@ function synth_with_oracle(
             score = if isempty(problem.spec)
                 1.0
             else
-                _, s = HerbSearch.evaluate(
+                HerbSearch.evaluate(
                     problem,
                     expr,
                     symboltable,
                     shortcircuit = shortcircuit,
                     allow_evaluation_errors = allow_evaluation_errors,
                 )
-                s
             end
 
             if score == 1

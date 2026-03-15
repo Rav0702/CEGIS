@@ -69,8 +69,7 @@ examples = IOExample[
 
 function do_synthesize(grammar, start_symbol, examples; max_depth=5, max_enumerations=50_000)
     solver   = GenericSolver(grammar, start_symbol; max_depth=max_depth)
-    ref      = Ref{Union{HerbConstraints.UniformSolver, Nothing}}(nothing)
-    iterator = BFSIterator(; solver=solver, uniform_solver_ref=ref)
+    iterator = BFSIterator(; solver=solver, max_depth=max_depth)
     symtab   = grammar2symboltable(grammar)
     for (i, candidate) in enumerate(iterator)
         i > max_enumerations && break
