@@ -105,9 +105,16 @@ function synth_with_oracle(
         best_score = 0
         best_program = nothing
         found_counterexample = false
-        println("[iter=$iter]")
+        println("[iter=$iter] spec size=$(length(problem.spec))")
+        
+        # Print all examples in current spec
+        for (idx, example) in enumerate(problem.spec)
+            println("[iter=$iter]   spec[$idx]: in=$(example.in), out=$(example.out)")
+        end
 
+        num_enumerated = 0
         for (i, candidate_program) in enumerate(iterator)
+            num_enumerated = i
             expr = rulenode2expr(candidate_program, grammar)
 
             score = if isempty(problem.spec)
@@ -128,6 +135,7 @@ function synth_with_oracle(
                 println("[iter=$iter] candidate: $candidate_expr")
 
                 current_satisfied = count_satisfied_examples(candidate_program)
+                println("[iter=$iter] candidate satisfies $current_satisfied / $(length(problem.spec)) examples")
                 if current_satisfied >= global_best_satisfied
                     global_best_satisfied = current_satisfied
                     global_best_program = candidate_program
@@ -172,6 +180,8 @@ function synth_with_oracle(
         end
         # ---- End copied synth core ----
 
+        println("[iter=$iter] enumerated=$num_enumerated, best_score=$best_score (satisfied $( best_score * length(problem.spec))/$(length(problem.spec)) examples)")
+        
         if found_counterexample
             continue
         end
