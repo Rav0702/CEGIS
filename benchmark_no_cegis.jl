@@ -14,29 +14,28 @@ SASearchIterator.  Results and pass-counts are printed after each trial.
 import Pkg
 
 const _SCRIPT_ENV = joinpath(@__DIR__, ".script_env")
+
+# Start fresh if environment exists
+if isdir(_SCRIPT_ENV)
+    rm(_SCRIPT_ENV; recursive=true)
+end
+
 Pkg.activate(_SCRIPT_ENV)
 
-const _HERB_PKGS = [
-    "HerbCore", "HerbGrammar", "HerbConstraints",
-    "HerbInterpret", "HerbSearch", "HerbSpecification",
-    "CEGIS", "HerbBenchmarks",
-]
-let dev_dir = joinpath(homedir(), ".julia", "dev"),
-    manifest = joinpath(_SCRIPT_ENV, "Manifest.toml")
+const _DEV_DIR = joinpath(homedir(), ".julia", "dev")
 
-    if !isfile(manifest) || filesize(manifest) < 200
-        pkgs = [Pkg.PackageSpec(path=joinpath(dev_dir, p))
-                for p in _HERB_PKGS if isdir(joinpath(dev_dir, p))]
-        isempty(pkgs) || Pkg.develop(pkgs)
-    end
+# Add all packages in dependency order
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbCore")))
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbGrammar")))
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbConstraints")))
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbInterpret")))
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbSearch")))
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbSpecification")))
 
-    # Ensure benchmark package and its dependencies are available.
-    benchmark_path = joinpath(@__DIR__, "..", "HerbBenchmarks.jl")
-    if isdir(benchmark_path)
-        Pkg.develop(Pkg.PackageSpec(path=benchmark_path))
-    end
-    Pkg.instantiate()
-end
+# Develop HerbBenchmarks
+Pkg.develop(Pkg.PackageSpec(path=joinpath(_DEV_DIR, "HerbBenchmarks.jl")))
+
+Pkg.instantiate()
 
 using HerbBenchmarks
 using HerbConstraints
