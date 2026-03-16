@@ -65,6 +65,7 @@ synth_out = synth_with_oracle(
     max_depth = 5,
     max_enumerations = 5_000_000,
     mod = benchmark_module,
+    iterator_type = :bfs,   # :mh, :sa, :bfs, :dfs
 )
 result = synth_out.result
 satisfied_examples = synth_out.satisfied_examples

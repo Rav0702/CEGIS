@@ -104,6 +104,14 @@ Differences from HerbSearch.synth:
 - when a candidate fits current examples (`score == 1`), it is checked by the oracle,
 - if oracle returns a counterexample, the spec is expanded and search restarts,
 - if oracle returns nothing, synthesis succeeds.
+
+Keyword arguments:
+- `iterator_type::Symbol = :mh` — search strategy to use.
+  Supported values: `:mh` (Metropolis-Hastings), `:sa` (Simulated Annealing),
+  `:bfs` (breadth-first), `:dfs` (depth-first).
+- `max_depth`, `max_time`, `max_enumerations` — search limits.
+- `mod::Module` — module used for symbol table construction (so that
+  grammar functions like `bvnot_cvc` can be resolved).
 """
 function synth_with_oracle(
     grammar      :: AbstractGrammar,
@@ -114,7 +122,8 @@ function synth_with_oracle(
     max_enumerations :: Int = 50_000,
     shortcircuit     :: Bool = true,
     allow_evaluation_errors :: Bool = false,
-    mod::Module = Main
+    mod::Module = Main,
+    iterator_type :: Symbol = :mh,
 )
     start_time = time()
 
@@ -136,12 +145,82 @@ function synth_with_oracle(
         return round(Int, score * length(problem.spec))
     end
 
-    solver = GenericSolver(grammar, start_symbol; max_depth=max_depth)
-    iterator = BFSIterator(; solver=solver, max_depth=max_depth)
+    symboltable = grammar2symboltable(grammar, mod)
+    
+    # Safe evaluation function that handles errors gracefully.
+    # Note: `expr` is typed as `Any` because rulenode2expr can return literals
+    # (e.g. UInt64) as well as Expr objects, depending on the grammar.
+    # The stochastic iterator also internally calls grammar2symboltable(grammar)
+    # without the `mod` argument, so we ignore the `tab` it passes in and use
+    # our own pre-built `symboltable` that was created with the correct module.
+    safe_eval = (_tab, expr, input::Dict{Symbol, Any}) -> begin
+        try
+            return execute_on_input(symboltable, expr, input)
+        catch e
+            # Return NaN on evaluation error (missing function, runtime error, etc.)
+            return NaN
+        end
+    end
+    
+    # Cost function for stochastic iterators (MH / SA).
+    # Receives Vector of (expected, actual) tuples from all examples.
+    # Returns numeric cost (lower is better).
+    cost_fn = (results) -> begin
+        cost = 0.0
+        for (expected, actual) in results
+            is_nan = try
+                isnan(actual)
+            catch
+                false
+            end
+            if is_nan
+                # Evaluation failed, high penalty
+                cost += 1000.0
+            else
+                # Penalize incorrect outputs
+                cost += (actual != expected) ? 1.0 : 0.0
+            end
+        end
+        return cost
+    end
+    
+    # Build iterator based on selected type.
+    # Supported types:
+    #   :mh  -> MHSearchIterator  (stochastic Metropolis-Hastings)
+    #   :sa  -> SASearchIterator  (stochastic Simulated Annealing)
+    #   :bfs -> BFSIterator       (exhaustive breadth-first search)
+    #   :dfs -> DFSIterator       (exhaustive depth-first search)
+    
+    iterator = if iterator_type === :mh
+        MHSearchIterator(
+            grammar,
+            start_symbol,
+            problem.spec,
+            cost_fn;
+            max_depth=max_depth,
+            initial_temperature=1.0,
+            evaluation_function=safe_eval,
+        )
+    elseif iterator_type === :sa
+        SASearchIterator(
+            grammar,
+            start_symbol,
+            problem.spec,
+            cost_fn;
+            max_depth=max_depth,
+            initial_temperature=1.0,
+            evaluation_function=safe_eval,
+        )
+    elseif iterator_type === :bfs
+        BFSIterator(grammar, start_symbol; max_depth=max_depth)
+    elseif iterator_type === :dfs
+        DFSIterator(grammar, start_symbol; max_depth=max_depth)
+    else
+        error("Unknown iterator_type $(repr(iterator_type)). Supported: :mh, :sa, :bfs, :dfs")
+    end
     
     iter = 0
     num_enumerated_total = 0
-    symboltable = grammar2symboltable(grammar, mod)
     
     # ---- Copied synth core (search_procedure.jl) ----
     for candidate_program in iterator
@@ -228,12 +307,6 @@ function synth_with_oracle(
             push!(counterexamples, cx)
             added_example = IOExample(cx.input, cx.expected_output)
             push!(problem.spec, added_example)
-            
-            # Post constraint to solver
-            io_constraint = create_io_constraint(cx)
-            println("[enum=$num_enumerated_total] Oracle counterexample: input=$(cx.input), expected=$(cx.expected_output)")
-            println("[enum=$num_enumerated_total] Adding Constraint: $io_constraint")
-            push!(get_state(solver).active_constraints, io_constraint)
             
             iter += 1
             println("[iter=$iter] enum=$num_enumerated_total, Added IO counterexample, spec size now=$(length(problem.spec))")
