@@ -62,9 +62,8 @@ synth_out = synth_with_oracle(
     pair.grammar,
     :Start,
     oracle;
-    max_iterations = 20,
-    max_depth = 20,
-    max_enumerations = 50_000_000,
+    max_depth = 5,
+    max_enumerations = 5_000_000,
     mod = benchmark_module,
 )
 result = synth_out.result

@@ -65,7 +65,6 @@ synth_out = synth_with_oracle(
     grammar,
     start_symbol,
     oracle;
-    max_iterations = 40,
     max_depth = 6,
     max_enumerations = 200_000,
 )
