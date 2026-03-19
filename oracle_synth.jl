@@ -185,6 +185,8 @@ function synth_with_oracle(
                 global_best_satisfied = current_satisfied
                 global_best_program = candidate_program
             end
+# TODO do not add the IO contraint to the solver but do the check now
+
 
             # Check candidate against all posted IO constraints
             # violates_constraint = false
