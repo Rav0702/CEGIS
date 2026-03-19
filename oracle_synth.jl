@@ -44,60 +44,10 @@ if !isdefined(Main, :CEGIS)
 end
 using .CEGIS
 
-# Custom constraint type for IO examples
-"""
-    IOExampleConstraint <: AbstractLocalConstraint
-
-A constraint that enforces a program must produce a specific output for a given input.
-"""
-struct IOExampleConstraint <: AbstractLocalConstraint
-    input::Dict{Symbol, Any}
-    expected_output::Any
-end
-
-"""
-    create_io_constraint(cx::Counterexample)::IOExampleConstraint
-
-Convert a counterexample to an IOExampleConstraint that can be posted to the solver.
-"""
-function create_io_constraint(cx::Counterexample)::IOExampleConstraint
-    return IOExampleConstraint(cx.input, cx.expected_output)
-end
-
-"""
-    check_io_constraint(program::RuleNode, grammar::AbstractGrammar, 
-                       constraint::IOExampleConstraint, symboltable, mod)::Bool
-
-Check if a program satisfies an IOExampleConstraint.
-"""
-function check_io_constraint(
-    program::RuleNode,
-    grammar::AbstractGrammar,
-    constraint::IOExampleConstraint,
-    symboltable,
-    mod;
-    allow_evaluation_errors::Bool = false
-)::Bool
-    expr = rulenode2expr(program, grammar)
-    try
-        problem = Problem(IOExample[IOExample(constraint.input, constraint.expected_output)])
-        score = HerbSearch.evaluate(
-            problem,
-            expr,
-            symboltable,
-            shortcircuit = false,
-            allow_evaluation_errors = allow_evaluation_errors,
-        )
-        return score == 1.0
-    catch
-        return false
-    end
-end
-
 """
     synth_with_oracle(grammar, start_symbol, oracle; ...)
 
-Copied-from-synth style search loop with oracle integration.
+Synthesis loop with oracle-driven CEGIS behavior.
 
 Differences from HerbSearch.synth:
 - keeps a mutable IO-example `Problem` initialized as empty,
@@ -161,7 +111,15 @@ function synth_with_oracle(
         
         expr = rulenode2expr(candidate_program, grammar)
 
-        score = if isempty(problem.spec)
+        # Check if we're using SemanticSMTOracle (which works with symbolic expressions)
+        # For symbolic oracles, skip normal evaluation and go straight to verification
+        is_semantic_oracle = string(typeof(oracle)) == "SemanticSMTOracle"
+        
+        score = if is_semantic_oracle
+            # For SemanticSMTOracle, always score 1.0 (symbolic expressions are always "valid" structurally)
+            # The oracle will verify correctness semantically
+            1.0
+        elseif isempty(problem.spec)
             1.0
         else
             HerbSearch.evaluate(
@@ -185,32 +143,40 @@ function synth_with_oracle(
                 global_best_satisfied = current_satisfied
                 global_best_program = candidate_program
             end
-# TODO do not add the IO contraint to the solver but do the check now
 
-
-            # Check candidate against all posted IO constraints
-            # violates_constraint = false
-
-            # for constraint in get_state(solver).active_constraints
-            #     if constraint isa IOExampleConstraint
-            #         if !check_io_constraint(
-            #             candidate_program,
-            #             grammar,
-            #             constraint,
-            #             symboltable,
-            #             mod,
-            #             allow_evaluation_errors = allow_evaluation_errors,
-            #         )
-            #             violates_constraint = true
-            #             break
-            #         end
-            #     end
-            # end
-
-            # if violates_constraint
-            #     continue
-            # end
-
+            # STANDARD CEGIS APPROACH:
+            # 1. First check candidate against all accumulated IOExamples
+            # 2. Only if it passes all, call the oracle for verification
+            
+            # Check candidate against all IOExamples in problem.spec
+            passes_all_examples = true
+            if !isempty(problem.spec)
+                for io_example in problem.spec
+                    try
+                        result = HerbSearch.evaluate(
+                            Problem(IOExample[io_example]),
+                            candidate_expr,
+                            symboltable,
+                            shortcircuit = false,
+                            allow_evaluation_errors = false,
+                        )
+                        if result != 1.0  # Doesn't satisfy this example
+                            passes_all_examples = false
+                            break
+                        end
+                    catch
+                        passes_all_examples = false
+                        break
+                    end
+                end
+            end
+            
+            # If candidate fails any IOExample, skip Z3 oracle and continue to next candidate
+            if !passes_all_examples
+                continue
+            end
+            
+            # Candidate passes all IOExamples - now call oracle for verification/counterexample search
             oracle_problem = CEGISProblem(
                 grammar,
                 start_symbol,
@@ -231,11 +197,7 @@ function synth_with_oracle(
             added_example = IOExample(cx.input, cx.expected_output)
             push!(problem.spec, added_example)
             
-            # Post constraint to solver
-            io_constraint = create_io_constraint(cx)
             println("[enum=$num_enumerated_total] Oracle counterexample: input=$(cx.input), expected=$(cx.expected_output)")
-            println("[enum=$num_enumerated_total] Adding Constraint: $io_constraint")
-            push!(get_state(solver).active_constraints, io_constraint)
             
             iter += 1
             println("[iter=$iter] enum=$num_enumerated_total, Added IO counterexample, spec size now=$(length(problem.spec))")
