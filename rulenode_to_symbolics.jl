@@ -84,7 +84,7 @@ This is the core recursive function that handles:
 - Composite nodes (operations with children)
 """
 function _rulenode_to_symbolic_recursive(node::RuleNode, grammar::AbstractGrammar, var_map::Dict)
-    rule_index = node.rule_index
+    rule_index = node.ind
     
     # Get the rule from the grammar
     rule = grammar.rules[rule_index]
@@ -193,6 +193,9 @@ function _evaluate_composite_rule(rule, children::Vector{RuleNode}, grammar::Abs
         return child_values[1] >= child_values[2]
     elseif op_name == "<=" && length(child_values) == 2
         return child_values[1] <= child_values[2]
+    elseif op_name == "=" && length(child_values) == 2
+        # = in SyGuS becomes == in Julia
+        return child_values[1] == child_values[2]
     elseif op_name == "==" && length(child_values) == 2
         return child_values[1] == child_values[2]
     elseif op_name == "!=" && length(child_values) == 2
