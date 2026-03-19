@@ -124,6 +124,9 @@ function build_grammar_from_spec(vars::Vector{Symbol})
     grammar_str *= "    Expr = 0\n"
     grammar_str *= "    Expr = 1\n"
     grammar_str *= "    Expr = 2\n"
+    grammar_str *= "    Expr = 3\n"
+    grammar_str *= "    Expr = 4\n"
+    grammar_str *= "    Expr = 5\n"
     
     # Add each variable from the spec
     for var in vars
@@ -197,6 +200,17 @@ if result.program !== nothing
     println()
 else
     println("✗ No program found within the resource limits")
+    if !isempty(result.counterexamples)
+        println("Best program found (from counterexamples):")
+        best_expr = rulenode2expr(result.program, grammar)
+        println("  $best_expr")
+        println()
+    end
+end
+
+println("Final Specification (IO Examples collected):")
+for (i, example) in enumerate(result.counterexamples)
+    println("  Example $i: input=$(example.input) => expected=$(example.expected_output)")
 end
 
 println()

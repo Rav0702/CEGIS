@@ -97,6 +97,12 @@ function synth_with_oracle(
     for candidate_program in iterator
         num_enumerated_total += 1
         
+        # Check max_enumerations FIRST, before any continues that would bypass it
+        if num_enumerated_total > max_enumerations
+            println("[enum=$num_enumerated_total] Reached max_enumerations limit ($max_enumerations)")
+            break
+        end
+        
         if time() - start_time > max_time
             return (
                 result = CEGISResult(CEGIS.cegis_timeout, global_best_program, iter, counterexamples),
@@ -104,9 +110,10 @@ function synth_with_oracle(
             )
         end
         
-        # Log every 100000 enumerations
-        if num_enumerated_total % 100000 == 0
-            println("[enum=$num_enumerated_total] spec size=$(length(problem.spec))")
+        # Log every 10000 enumerations with candidate details
+        if num_enumerated_total % 10000 == 0
+            expr_log = rulenode2expr(candidate_program, grammar)
+            println("[enum=$num_enumerated_total] checking: $expr_log | spec size=$(length(problem.spec))")
         end
         
         expr = rulenode2expr(candidate_program, grammar)
@@ -136,7 +143,7 @@ function synth_with_oracle(
             candidate_expr = rulenode2expr(candidate_program, grammar)
             
             # Log candidate program
-            println("[enum=$num_enumerated_total] Found candidate: $candidate_expr")
+            # println("[enum=$num_enumerated_total] Found candidate: $candidate_expr")
 
             current_satisfied = count_satisfied_examples(candidate_program)
             if current_satisfied >= global_best_satisfied
@@ -205,14 +212,16 @@ function synth_with_oracle(
             # Continue with next candidate
             continue
         end
-
-        if num_enumerated_total > max_enumerations
-            break
-        end
     end
     # ---- End copied synth core ----
 
-    println("[enum=$num_enumerated_total] iterator exhausted, aborting search")
+    if global_best_program !== nothing
+        best_expr = rulenode2expr(global_best_program, grammar)
+        println("[enum=$num_enumerated_total] Best program found: $best_expr (satisfied $global_best_satisfied examples)")
+    else
+        println("[enum=$num_enumerated_total] No candidate program found")
+    end
+    
     return (
         result = CEGISResult(CEGIS.cegis_failure, global_best_program, iter, counterexamples),
         satisfied_examples = global_best_satisfied,
