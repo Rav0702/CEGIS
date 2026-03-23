@@ -134,14 +134,45 @@ function CEGIS.extract_counterexample(
             end
             
             # Precondition is satisfied, get expected output
+            # The rhs_out can be either an integer (for numeric outputs) or a string (for expressions)
             rhs_out_value = constraint.rhs_out
-            if rhs_out_value isa String
-                julia_rhs_str = sexpression_to_julia(rhs_out_value)
-                rhs_expr = Meta.parse(julia_rhs_str)
-                rhs_symbolic = substitute_symbols(rhs_expr, oracle.sym_vars)
-                expected_output = evaluate_in_z3_model(rhs_symbolic, cs, cs.context, model_ptr)
-            else
+            
+            # Handle numeric outputs directly
+            if rhs_out_value isa Int || rhs_out_value isa Float64
                 expected_output = rhs_out_value
+            else
+                # rhs_out_value is a string expression like "(+ x1 x2)" - need to evaluate it
+                rhs_str = string(rhs_out_value)  # Ensure it's a string
+                try
+                    # Convert S-expression to Julia format
+                    julia_rhs_str = sexpression_to_julia(rhs_str)
+                    # Parse into an expression
+                    rhs_expr = Meta.parse(julia_rhs_str)
+                    # Substitute symbolic variables
+                    rhs_symbolic = substitute_symbols(rhs_expr, oracle.sym_vars)
+                    
+                    # First try Z3 model evaluation
+                    expected_output = evaluate_in_z3_model(rhs_symbolic, cs, cs.context, model_ptr)
+                    
+                    # If Z3 evaluation returned nothing or a string that looks unevaluated,
+                    # fall back to direct evaluation using the counterexample values
+                    if expected_output === nothing || (expected_output isa String && startswith(expected_output, "("))
+                        expected_output = evaluate_expr_with_values(rhs_symbolic, input_dict)
+                        # If that also fails, set to 0
+                        if expected_output === nothing
+                            println("  WARNING: Could not evaluate RHS expression '$rhs_str' with input $input_dict")
+                            expected_output = 0
+                        end
+                    elseif expected_output isa String
+                        # Z3 returned something that's not numeric - this shouldn't happen for well-formed problems
+                        println("  WARNING: Z3 evaluation of RHS returned string: '$expected_output'")
+                        expected_output = 0
+                    end
+                catch e
+                    # If evaluation fails, set to 0 as fallback
+                    println("  WARNING: Failed to evaluate RHS expression '$rhs_str': $e")
+                    expected_output = 0
+                end
             end
             
             println("Violated constraint #$i: expected output $expected_output")
@@ -182,6 +213,9 @@ function evaluate_in_z3_model(expr, cs::Constraints, context, model_ptr)
     if success
         result_str = unsafe_string(Z3.Libz3.Z3_ast_to_string(context.ctx, result_ptr[]))
         
+        # Try to parse the result as a numeric value first
+        # Z3 may return results in various formats: "42", "(\- 3)", "(+ 2 3)", etc.
+        
         # Handle boolean values
         if result_str == "true"
             return true
@@ -202,17 +236,62 @@ function evaluate_in_z3_model(expr, cs::Constraints, context, model_ptr)
             end
         end
         
-        # Try to parse as numeric value
+        # Try to parse as direct numeric value (most common case)
         try
             return parse(Int, result_str)
         catch
             try
                 return parse(Float64, result_str)
             catch
-                return result_str
             end
         end
+        
+        # If direct parsing fails, it might be an S-expression like "(+ 2 3)"
+        # Try to evaluate it recursively as a simplified form
+        if startswith(result_str, "(") && endswith(result_str, ")")
+            # Extract the operator and operands
+            # For now, return the string as-is (this shouldn't normally happen for arithmetic)
+            # since Z3 should simplify arithmetic expressions automatically
+            return result_str
+        end
+        
+        return result_str
     end
     
+    return nothing
+end
+
+"""
+    evaluate_expr_with_values(expr, values_dict::Dict{Symbol, Any})
+
+Evaluate a standard (non-Z3) expression by directly substituting variable values.
+This is a fallback for when Z3 model evaluation doesn't work properly.
+
+Args:
+- expr: The expression (can be SymbolicUtils expression or Julia expression)
+- values_dict: Dictionary mapping variable names (as Symbols) to their numeric values
+"""
+function evaluate_expr_with_values(expr, values_dict::Dict{Symbol, Any})
+    try
+        # If it's already a SymbolicUtils expression, evaluate it directly
+        if applicable(Symbolics.substitute, expr, values_dict)
+            result = Symbolics.substitute(expr, values_dict)
+            # If result is still symbolic, try to simplify
+            if applicable(Symbolics.simplify, result)
+                result = Symbolics.simplify(result)
+            end
+            # Convert to a numeric value if possible
+            if result isa Number
+                return result
+            elseif isa(result, SymbolicUtils.Sym) || isa(result, SymbolicUtils.Add) || 
+                   isa(result, SymbolicUtils.Mul) || isa(result, SymbolicUtils.Div)
+                # Try to evaluate the expression numerically
+                return Float64(result)
+            end
+            return result
+        end
+    catch
+        # If substitute/evaluation fails, return nothing
+    end
     return nothing
 end

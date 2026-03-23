@@ -45,6 +45,62 @@ end
 using .CEGIS
 
 """
+    evaluate_symbolic_expr_on_example(expr, io_example::IOExample, sym_vars::Dict)
+
+Evaluate a symbolic/mathematical expression against an IOExample.
+
+For symbolic expressions from the grammar, this evaluates them by substituting
+the input variables and checking if the result matches the expected output.
+
+Returns true if the expression satisfies the example, false otherwise.
+"""
+function evaluate_symbolic_expr_on_example(expr, io_example::IOExample, sym_vars::Dict)
+    try
+        # Substitute input values into the expression
+        substituted = Symbolics.substitute(expr, io_example.in)
+        
+        # Try to simplify and evaluate
+        result = try
+            Symbolics.simplify(substituted)
+        catch
+            substituted
+        end
+        
+        # Convert result to comparable value
+        result_value = if result isa Number
+            result
+        else
+            try
+                Float64(result)
+            catch
+                return false
+            end
+        end
+        
+        # Check if result matches expected output
+        expected = io_example.out
+        expected_value = if expected isa Number
+            expected
+        else
+            try
+                Float64(expected)
+            catch
+                return false
+            end
+        end
+        
+        # Use approximate equality for floats
+        if result_value isa Float64 && expected_value isa Float64
+            return abs(result_value - expected_value) < 1e-9
+        else
+            return result_value == expected_value
+        end
+    catch e
+        return false
+    end
+end
+
+"""
     synth_with_oracle(grammar, start_symbol, oracle; ...)
 
 Synthesis loop with oracle-driven CEGIS behavior.
@@ -118,15 +174,9 @@ function synth_with_oracle(
         
         expr = rulenode2expr(candidate_program, grammar)
 
-        # Check if we're using SemanticSMTOracle (which works with symbolic expressions)
-        # For symbolic oracles, skip normal evaluation and go straight to verification
-        is_semantic_oracle = string(typeof(oracle)) == "SemanticSMTOracle"
-        
-        score = if is_semantic_oracle
-            # For SemanticSMTOracle, always score 1.0 (symbolic expressions are always "valid" structurally)
-            # The oracle will verify correctness semantically
-            1.0
-        elseif isempty(problem.spec)
+        # Evaluate candidate against accumulated IOExamples
+        # Start with high score; will be reduced if examples fail
+        score = if isempty(problem.spec)
             1.0
         else
             HerbSearch.evaluate(
@@ -155,23 +205,63 @@ function synth_with_oracle(
             # 1. First check candidate against all accumulated IOExamples
             # 2. Only if it passes all, call the oracle for verification
             
-            # Check candidate against all IOExamples in problem.spec
+            # For symbolic oracles, verify candidate against accumulated IOExamples
+            # by substituting input values and checking outputs
             passes_all_examples = true
             if !isempty(problem.spec)
                 for io_example in problem.spec
                     try
-                        result = HerbSearch.evaluate(
-                            Problem(IOExample[io_example]),
-                            candidate_expr,
-                            symboltable,
-                            shortcircuit = false,
-                            allow_evaluation_errors = false,
-                        )
-                        if result != 1.0  # Doesn't satisfy this example
+                        # Try to evaluate the candidate by substituting input values
+                        # For symbolic expressions, use Symbolics.substitute and simplify
+                        substituted = try
+                            Symbolics.substitute(candidate_expr, io_example.in)
+                        catch
+                            # If substitution fails, try generic evaluation
+                            try
+                                symboltable_example = copy(symboltable)
+                                for (var, val) in io_example.in
+                                    symboltable_example[var] = val
+                                end
+                                eval(symboltable_example, candidate_expr)
+                            catch
+                                # If both fail, assume it doesn't satisfy the example
+                                throw(ErrorException("Could not evaluate candidate"))
+                            end
+                        end
+                        
+                        # Simplify the result if possible
+                        result_value = try
+                            simplified = Symbolics.simplify(substituted)
+                            if simplified isa Number
+                                Float64(simplified)
+                            else
+                                Float64(simplified)
+                            end
+                        catch
+                            Float64(substituted)
+                        end
+                        
+                        # Compare with expected output
+                        expected_value = if io_example.out isa Number
+                            Float64(io_example.out)
+                        else
+                            io_example.out
+                        end
+                        
+                        # Check equality (with some tolerance for floats)
+                        is_equal = false
+                        if result_value isa Float64 && expected_value isa Float64
+                            is_equal = abs(result_value - expected_value) < 1e-9
+                        else
+                            is_equal = (result_value == expected_value)
+                        end
+                        
+                        if !is_equal
                             passes_all_examples = false
                             break
                         end
                     catch
+                        # If evaluation fails, assume example is not satisfied
                         passes_all_examples = false
                         break
                     end
@@ -200,14 +290,29 @@ function synth_with_oracle(
                 )
             end
 
-            push!(counterexamples, cx)
-            added_example = IOExample(cx.input, cx.expected_output)
-            push!(problem.spec, added_example)
+            # Check if this counterexample input is already in the specification
+            is_duplicate_input = false
+            for existing_example in problem.spec
+                if existing_example.in == cx.input
+                    is_duplicate_input = true
+                    println("[enum=$num_enumerated_total] SKIP: Counterexample input already in spec: $(cx.input)")
+                    break
+                end
+            end
             
-            println("[enum=$num_enumerated_total] Oracle counterexample: input=$(cx.input), expected=$(cx.expected_output)")
-            
-            iter += 1
-            println("[iter=$iter] enum=$num_enumerated_total, Added IO counterexample, spec size now=$(length(problem.spec))")
+            # Only add if it's a new input
+            if !is_duplicate_input
+                push!(counterexamples, cx)
+                added_example = IOExample(cx.input, cx.expected_output)
+                push!(problem.spec, added_example)
+                
+                println("[enum=$num_enumerated_total] Oracle counterexample: input=$(cx.input), expected=$(cx.expected_output)")
+                
+                iter += 1
+                println("[iter=$iter] enum=$num_enumerated_total, Added IO counterexample, spec size now=$(length(problem.spec))")
+            else
+                println("[enum=$num_enumerated_total] Duplicate counterexample ignored, continuing enumeration")
+            end
             
             # Continue with next candidate
             continue

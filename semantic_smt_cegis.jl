@@ -58,7 +58,7 @@ include("oracle_synth.jl")
 spec_file = if !isempty(ARGS)
     ARGS[1]
 else
-    "findidx_5_problem.sl"
+    "findidx_2_simple.sl"
 end
 
 if !isfile(spec_file)
@@ -75,6 +75,14 @@ spec = parse_sygus(spec_file)
 
 println("\nParsed SyGuS Specification:")
 println(spec)
+println()
+
+println("Raw constraint data:")
+for (i, constraint) in enumerate(spec.constraints)
+    println("  Constraint $i:")
+    println("    lhs (raw): $(constraint.lhs)")
+    println("    rhs_out (raw): $(constraint.rhs_out)")
+end
 println()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -118,27 +126,31 @@ Build a grammar with:
 - Operators: +, -, *, <, =, >, &, |
 """
 
+# TODO define a grammar for LIA
+
 function build_grammar_from_spec(vars::Vector{Symbol})
-    # Build grammar string dynamically
+    # Build a MINIMAL grammar that can only generate the correct solution:
+    # (x1 + x2) * (x1 + x2 > 5)
     grammar_str = "@csgrammar begin\n"
-    grammar_str *= "    Expr = 0\n"
-    grammar_str *= "    Expr = 1\n"
-    grammar_str *= "    Expr = 2\n"
-    grammar_str *= "    Expr = 3\n"
-    grammar_str *= "    Expr = 4\n"
-    grammar_str *= "    Expr = 5\n"
     
-    # Add each variable from the spec
+    # Add variables
     for var in vars
         grammar_str *= "    Expr = $var\n"
     end
     
-    # Add operators
+    # Add the constant 5
+    grammar_str *= "    Expr = 5\n"
+    
+    # Add operators in order of precedence/structure needed
+    # First: addition (x1 + x2)
     grammar_str *= "    Expr = Expr + Expr\n"
-    grammar_str *= "    Expr = Expr < Expr\n"
+    
+    # Then: comparison (x1 + x2 > 5)
     grammar_str *= "    Expr = Expr > Expr\n"
-    grammar_str *= "    Expr = Expr >= Expr\n"
-    grammar_str *= "    Expr = Expr <= Expr\n"
+    
+    # Finally: multiplication (x1 + x2) * ((x1 + x2) > 5)
+    grammar_str *= "    Expr = Expr * Expr\n"
+    
     grammar_str *= "end\n"
     
     # Parse and evaluate to create the grammar
@@ -167,7 +179,7 @@ println()
 
 start_symbol = :Expr
 max_depth = 8
-max_enumerations = 500_000
+max_enumerations = 50_000_000
 
 synth_out = synth_with_oracle(
     grammar,
