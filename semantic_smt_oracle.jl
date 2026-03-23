@@ -7,35 +7,14 @@ The oracle takes a parsed SyGuS specification (SMTSpec) and checks candidate
 programs against its constraints using SMT solving. It produces counterexamples
 when a candidate violates a constraint.
 
-Usage:
-    using HerbCore, HerbGrammar
-    include("parse_sygus.jl")
-    include("rulenode_to_symbolics.jl")
-    include("semantic_smt_oracle.jl")
-    
-    spec = parse_sygus("problem.sl")
-    oracle = SemanticSMTOracle(spec, sym_vars, grammar)
-    cex = extract_counterexample(oracle, problem, candidate)
+Requires: parse_sygus.jl, rulenode_to_symbolics.jl, and CEGIS module to be loaded first.
 """
-
-include("parse_sygus.jl")
-include("rulenode_to_symbolics.jl")
 
 using HerbCore
 using HerbGrammar
 using SymbolicSMT
 using SymbolicUtils
 using Z3
-
-if !isdefined(Main, :CEGIS)
-    # Try to load CEGIS module
-    try
-        using CEGIS
-    catch
-        include(joinpath(@__DIR__, "src", "CEGIS.jl"))
-        using .CEGIS
-    end
-end
 
 """
     SemanticSMTOracle <: AbstractOracle
