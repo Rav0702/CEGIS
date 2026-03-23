@@ -54,13 +54,14 @@ end
 
 function build_grammar_from_spec(vars::Vector{Symbol})
     grammar_str = "@csgrammar begin\n"
-    for i in 0:5
+    for i in 5:5
         grammar_str *= "    Expr = $i\n"
     end
     for var in vars
         grammar_str *= "    Expr = $var\n"
     end
     grammar_str *= "    Expr = Expr + Expr\n"
+    grammar_str *= "    Expr = Expr * Expr\n"
     grammar_str *= "    Expr = Expr < Expr\n"
     grammar_str *= "    Expr = Expr > Expr\n"
     grammar_str *= "    Expr = Expr >= Expr\n"

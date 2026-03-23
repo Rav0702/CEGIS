@@ -114,7 +114,7 @@ function CEGIS.extract_counterexample(
             
             # Precondition is satisfied, get expected output
             rhs_out_value = constraint.rhs_out
-            if rhs_out_value isa String
+            if rhs_out_value isa AbstractString
                 julia_rhs_str = sexpression_to_julia(rhs_out_value)
                 rhs_expr = Meta.parse(julia_rhs_str)
                 rhs_symbolic = substitute_symbols(rhs_expr, oracle.sym_vars)

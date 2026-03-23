@@ -202,7 +202,8 @@ function Base.show(io::IO, spec::SMTSpec)
     println(io, "Constraints ($(length(spec.constraints))):")
     for (i, c) in enumerate(spec.constraints)
         julia_lhs = sexpression_to_julia(c.lhs)
-        println(io, "  [$i] Julia: $julia_lhs => $(c.rhs_out)")
+        julia_rhs = c.rhs_out isa AbstractString ? sexpression_to_julia(c.rhs_out) : c.rhs_out
+        println(io, "  [$i] Julia: $julia_lhs => $julia_rhs")
     end
 end
 
@@ -218,7 +219,7 @@ function build_cex_query(spec::SMTSpec, candidate, sym_dict::Dict)
     
     violations = map(spec.constraints) do c
         lhs_symbolic = substitute_symbols(Meta.parse(sexpression_to_julia(c.lhs)), sym_dict)
-        rhs = c.rhs_out isa String ? 
+        rhs = c.rhs_out isa AbstractString ? 
             substitute_symbols(Meta.parse(sexpression_to_julia(c.rhs_out)), sym_dict) : c.rhs_out
         lhs_symbolic & (candidate != rhs)
     end
