@@ -40,6 +40,8 @@ using HerbSpecification
 
 # ── local includes (order matters: types first) ───────────────────────────────
 include("types.jl")
+include("CEXGeneration/CEXGeneration.jl") # CEXGeneration module (needed by Z3Oracle)
+include("Oracles/Oracles.jl") # Oracle implementations & abstract interface
 include("synthesizer.jl")
 include("verifier.jl")
 include("counterexample.jl")
@@ -51,6 +53,9 @@ include("cegis_loop.jl")     # core loop — depends on all of the above
 # ─────────────────────────────────────────────────────────────────────────────
 
 export
+    # Support modules
+    CEXGeneration,
+    
     # Types
     CEGISProblem,
     CEGISResult,
@@ -60,6 +65,7 @@ export
     VerificationStatus,
     AbstractOracle,
     IOExampleOracle,
+    Z3Oracle,
 
     # Main entry point
     run_cegis,
