@@ -46,6 +46,7 @@ include("synthesizer.jl")
 include("verifier.jl")
 include("counterexample.jl")
 include("learner.jl")
+include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 include("cegis_loop.jl")     # core loop — depends on all of the above
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,9 +61,15 @@ export
     CEGISProblem,
     CEGISResult,
     CEGISStatus,
+    cegis_success,
+    cegis_failure,
+    cegis_timeout,
     Counterexample,
     VerificationResult,
     VerificationStatus,
+    verified,
+    verification_failed,
+    verification_error,
     AbstractOracle,
     IOExampleOracle,
     Z3Oracle,
@@ -81,6 +88,9 @@ export
     extract_counterexample,
     oracle_from_examples,
     oracle_from_smt,
+
+    # Oracle-driven synthesis
+    synth_with_oracle,
 
     # Counterexample management
     counterexample_to_ioexample,

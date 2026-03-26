@@ -44,8 +44,7 @@ end
 using .CEGIS
 
 # Include supporting modules (order matters)
-# CEXGeneration is loaded through CEGIS module
-include("oracle_synth.jl")
+# All oracle implementations are available through CEGIS module now
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -56,6 +55,9 @@ include("oracle_synth.jl")
 
 Build a synthesis grammar from a SyGuS specification file.
 Uses CEXGeneration to parse the spec and extract variable information.
+
+The grammar separates IntExpr (returns Int) from BoolExpr (returns Bool) to ensure
+the synthesis function returns the correct type.
 """
 function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     spec = CEXGeneration.parse_spec_from_file(spec_file)
@@ -65,29 +67,41 @@ function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     
     println("Free variables in spec: $var_names")
     
-    # Build grammar with variables and basic arithmetic operations
+    # Build grammar with separate Int and Bool expressions
+    # The synthesis target (Expr) returns Int
     grammar_str = "@csgrammar begin\n"
     
-    # Add integer constants
+    # Expr: Integer expressions (can be returned by synthesis function)
     for i in 0:5
         grammar_str *= "    Expr = $i\n"
     end
     
-    # Add variables
+    # Add variables to IntExpr
     for var in var_names
         grammar_str *= "    Expr = $var\n"
     end
     
-    # Add arithmetic and logical operations
+    # Arithmetic operations return Int
     grammar_str *= "    Expr = Expr + Expr\n"
     grammar_str *= "    Expr = Expr - Expr\n"
     grammar_str *= "    Expr = Expr * Expr\n"
-    grammar_str *= "    Expr = Expr < Expr\n"
-    grammar_str *= "    Expr = Expr > Expr\n"
-    grammar_str *= "    Expr = Expr >= Expr\n"
-    grammar_str *= "    Expr = Expr <= Expr\n"
-    grammar_str *= "    Expr = Expr == Expr\n"
-    grammar_str *= "    Expr = Expr != Expr\n"
+    
+    # # If-then-else for integer expressions
+    # grammar_str *= "    Expr = ifelse(BoolExpr, Expr, Expr)\n"
+    
+    # # BoolExpr: Boolean expressions (for conditions only)
+    # # Integer constants for Bool literals
+    # grammar_str *= "    BoolExpr = true\n"
+    # grammar_str *= "    BoolExpr = false\n"
+    
+    # Comparisons
+    grammar_str *= "    BoolExpr = Expr < Expr\n"
+    grammar_str *= "    BoolExpr = Expr > Expr\n"
+    grammar_str *= "    BoolExpr = Expr >= Expr\n"
+    grammar_str *= "    BoolExpr = Expr <= Expr\n"
+    # grammar_str *= "    BoolExpr = Expr == Expr\n"
+    # grammar_str *= "    BoolExpr = Expr != Expr\n"
+    
     grammar_str *= "end\n"
     
     return eval(Meta.parse(grammar_str))
@@ -222,11 +236,11 @@ max_depth = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 6
 max_enumerations = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 50_000
 
 println("Z3 CEGIS Synthesis Script")
-println("=" * 80)
+println(repeat("=", 80))
 println("Spec file:        $spec_file")
 println("Max depth:        $max_depth")
 println("Max enumerations: $max_enumerations")
-println("=" * 80)
+println(repeat("=", 80))
 println()
 
 try
@@ -238,13 +252,13 @@ try
         exit(1)  # Failure or no solution
     end
 catch e
-    println("\n" * "=" * 80)
+    println("\n" * repeat("=", 80))
     println("ERROR during synthesis:")
-    println("=" * 80)
+    println(repeat("=", 80))
     println(e)
     println()
     println("Stacktrace:")
-    Base.showerror(stderr, e, catch_backrefs=false)
+    Base.showerror(stderr, e)
     println()
     exit(2)  # Error
 end
