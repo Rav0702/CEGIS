@@ -105,11 +105,20 @@ function extract_counterexample(
         # Convert RuleNode to Julia expression using HerbGrammar
         candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
         
+        # DEBUG: Print candidate expression
+        println("[Z3Oracle] Candidate expression: $(candidate_expr)")
+        
         # Convert Julia expression to Z3 expression
         candidate_z3 = _expr_to_z3(candidate_expr, oracle.z3_ctx, oracle.z3_vars)
         
+        # DEBUG: Print Z3 expression
+        println("[Z3Oracle] Z3 expression: $(candidate_z3)")
+        
         # Convert Z3 expression to SMT-LIB2 string representation
         candidate_str = string(candidate_z3)
+        
+        # DEBUG: Print candidate SMT-LIB2 string
+        println("[Z3Oracle] Candidate SMT-LIB2: $(candidate_str)")
         
         # Get the function name from the spec (assume single synthesis function)
         if isempty(oracle.spec.synth_funs)
@@ -117,15 +126,29 @@ function extract_counterexample(
         end
         func_name = oracle.spec.synth_funs[1].name
         
+        # DEBUG: Print function name
+        println("[Z3Oracle] Function name: $(func_name)")
+        println("[Z3Oracle] Original spec constraints count: $(length(oracle.spec.constraints))")
+        
         # Generate counterexample query using CEXGeneration
         candidates_dict = Dict(func_name => candidate_str)
         query = CEXGeneration.generate_cex_query(oracle.spec, candidates_dict)
         
+        # DEBUG: Print query
+        println("[Z3Oracle] ============ SMT-LIB2 Query ============")
+        println(query)
+        println("[Z3Oracle] ============ End Query ============")
+        
         # Verify the query using Z3
         result = CEXGeneration.verify_query(query)
         
+        # DEBUG: Print Z3 result status
+        println("[Z3Oracle] Z3 result status: $(result.status)")
+        println("[Z3Oracle] Z3 model: $(result.model)")
+        
         # If unsat, candidate is valid (no counterexample)
         if result.status == :unsat
+            println("[Z3Oracle] Result: UNSAT (candidate passes Z3 verification)")
             return nothing
         end
         
@@ -143,12 +166,19 @@ function extract_counterexample(
             func_key = "$(func_name)_result"
             expected_output = get(result.model, func_key, nothing)
             
+            # DEBUG: Print counterexample found
+            println("[Z3Oracle] Result: SAT - Counterexample found")
+            println("[Z3Oracle] Input: $(input_dict)")
+            println("[Z3Oracle] Expected output: $(expected_output)")
+            
             # Return counterexample
             return Counterexample(input_dict, expected_output, nothing)
         end
         
+        println("[Z3Oracle] Result: No counterexample extracted")
         return nothing
     catch e
+        println("[Z3Oracle] Exception caught: $(e)")
         return nothing
     end
 end
