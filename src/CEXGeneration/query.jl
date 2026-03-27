@@ -8,11 +8,143 @@ Handles:
 """
 
 """
-Substitute free variable names in a candidate expression with function parameter names.
-Replaces xi with yi where yi is the ith parameter (0-indexed).
+Extract condition and expected output from an implication constraint.
 
-# Example
-    substitute_params("(+ x1 x2)", ["y1", "y2"], ["x1", "x2"]) → "(+ y1 y2)"
+Takes a constraint like: (=> (and (< x0 x1) (< k x0)) (= (findIdx x0 x1 k) 0))
+Returns: (condition_expr, expected_output)
+  Where condition_expr = "(and (< x0 x1) (< k x0))"
+  And expected_output = "0"
+"""
+function parse_implication_constraint(constraint::String)::Union{Tuple{String, String}, Nothing}
+    # Remove outer whitespace
+    constraint = strip(constraint)
+    
+    # Must start with (=>
+    !startswith(constraint, "(=>") && return nothing
+    
+    # Extract the parts: (=> condition consequent)
+    # We need to carefully parse S-expressions
+    
+    # Find the position after "=>" where condition starts
+    i = 4  # Skip "(=> "
+    while i < length(constraint) && isspace(constraint[i])
+        i += 1
+    end
+    cond_start = i
+    
+    # Find end of condition (when depth returns to 0)
+    depth = 0
+    cond_end = -1
+    while i <= length(constraint)
+        if constraint[i] == '('
+            depth += 1
+        elseif constraint[i] == ')'
+            depth -= 1
+            if depth == 0
+                cond_end = i
+                break
+            end
+        end
+        i += 1
+    end
+    
+    cond_end == -1 && return nothing
+    condition = strip(constraint[cond_start:cond_end])
+    
+    # Extract consequent: (= (findIdx ...) expected_value)
+    i = cond_end + 1
+    while i < length(constraint) && isspace(constraint[i])
+        i += 1
+    end
+    
+    # The consequent starts here and should be (= ...)
+    # Extract it until we find the matching close paren
+    conseq_start = i
+    depth = 0
+    conseq_end = -1
+    while i <= length(constraint)
+        if constraint[i] == '('
+            depth += 1
+        elseif constraint[i] == ')'
+            depth -= 1
+            if depth == 0
+                conseq_end = i
+                break
+            end
+        end
+        i += 1
+    end
+    
+    conseq_end == -1 && return nothing
+    
+    # Now extract just the value from (= (findIdx x0 x1 k) VALUE)
+    # Get everything between the last two closing parens
+    consequent_str = strip(constraint[conseq_start:conseq_end])
+    # consequent_str is like: (= (findIdx x0 x1 k) 0)
+    
+    # Find the position of the value (last token before final paren)
+    # Remove the outer parens first
+    inner = strip(consequent_str[2:end-1])  # Remove (= ... )
+    
+    # Now inner is like: (findIdx x0 x1 k) 0
+    # Find the last space
+    last_space = findlast(' ', inner)
+    if last_space === nothing
+        return nothing
+    end
+    
+    expected_value = strip(inner[last_space+1:end])
+    
+    return (condition, expected_value)
+end
+
+"""
+Build a spec output function from constraints.
+
+Takes constraints like:
+  (=> (and (< x0 x1) (< k x0)) (= (findIdx x0 x1 k) 0))
+  (=> (and (< x0 x1) (>= k x0) (< k x1)) (= (findIdx x0 x1 k) 1))
+  (=> (and (< x0 x1) (>= k x1)) (= (findIdx x0 x1 k) 2))
+
+Returns a nested ite expression that computes the expected output:
+  (ite cond1 out1 (ite cond2 out2 (ite cond3 out3 default)))
+"""
+function build_spec_function_body(constraints::Vector{String}, default_value::String="0")::String
+    if isempty(constraints)
+        return default_value
+    end
+    
+    # Parse all constraints
+    parsed = []
+    for constraint in constraints
+        result = parse_implication_constraint(constraint)
+        if result !== nothing
+            push!(parsed, result)
+        end
+    end
+    
+    if isempty(parsed)
+        return default_value
+    end
+    
+    # Build nested ite from the end backwards
+    result = default_value
+    for (i, (cond, expected_val)) in enumerate(reverse(parsed))
+        # result = (ite cond expected_val previous_result)
+        result = "(ite $cond $expected_val $result)"
+    end
+    
+    result
+end
+
+"""
+Generate a counterexample query verifying a candidate against a specification.
+
+Returns SMT-LIB2 code that queries Z3 to find either:
+  - A counterexample (unsatisfiable: candidate doesn't satisfy spec)
+  - A valid model (satisfiable: candidate satisfies the constraint subset)
+
+Now includes a spec_output function to determine what the correct output should be.
 """
 function substitute_params(
     expr::String, param_names::Vector{String},
@@ -76,14 +208,31 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
         push!(query_parts, "")
     end
     
-    # Add constraints
+    # Define spec output function(s) - what the spec says the output should be
+    # This is built from the constraints
+    for sfun in spec.synth_funs
+        param_decls = join(["($(pname) $(sort))" for (pname, sort) in sfun.params], " ")
+        spec_body = build_spec_function_body(spec.constraints)
+        defn = "(define-fun $(sfun.name)_spec ($param_decls) $(sfun.sort) $spec_body)"
+        push!(query_parts, defn)
+    end
+    
+    if !isempty(spec.synth_funs)
+        push!(query_parts, "")
+    end
+    
+    # Add constraints - NEGATED to find counterexamples
+    # unsat means candidate satisfies all constraints
+    # sat means the model is a concrete counterexample
     if !isempty(spec.constraints)
         constraint_list = join(spec.constraints, "\n  ")
-        push!(query_parts, "(assert (and")
-        push!(query_parts, "  $constraint_list")
+        push!(query_parts, "(assert (not")
+        push!(query_parts, "  (and")
+        push!(query_parts, "    $constraint_list")
+        push!(query_parts, "  )")
         push!(query_parts, "))")
     else
-        push!(query_parts, "(assert true)")
+        push!(query_parts, "(assert false)   ; no constraints")
     end
     
     push!(query_parts, "")
@@ -99,11 +248,19 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     
     if !isempty(spec.synth_funs)
         push!(query_parts, "")
-        push!(query_parts, "; synthesised function value(s) at the counterexample point")
+        push!(query_parts, "; candidate function value(s) at the counterexample point")
         for sfun in spec.synth_funs
             # Build function call with free variables as arguments
             args = join([fv.name for fv in spec.free_vars], " ")
             push!(query_parts, "(get-value (($(sfun.name) $args)))")
+        end
+        
+        push!(query_parts, "")
+        push!(query_parts, "; expected output from spec")
+        for sfun in spec.synth_funs
+            # Build spec function call with free variables as arguments
+            args = join([fv.name for fv in spec.free_vars], " ")
+            push!(query_parts, "(get-value (($(sfun.name)_spec $args)))")
         end
     end
     

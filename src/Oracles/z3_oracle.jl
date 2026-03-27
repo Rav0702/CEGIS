@@ -34,13 +34,15 @@ Fields:
 
 The oracle converts candidates to Z3 expressions, then uses Z3's string output for SMT-LIB2.
 """
-struct Z3Oracle <: AbstractOracle
+mutable struct Z3Oracle <: AbstractOracle
     spec_file::String
     spec::Any  # CEXGeneration.Spec
     grammar::AbstractGrammar
     z3_ctx::Z3.Context
     z3_vars::Dict{String,Z3.Expr}
     mod::Module
+    enum_count::Int              # Track enumeration count
+    test_candidate::Union{String,Nothing}  # Candidate to test at enumeration 1000
 end
 
 """
@@ -86,7 +88,7 @@ function Z3Oracle(
         end
     end
     
-    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod)
+    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing)
 end
 
 """
@@ -102,23 +104,16 @@ function extract_counterexample(
     candidate::RuleNode
 )::Union{Counterexample, Nothing}
     try
+        # Increment enumeration counter
+        oracle.enum_count += 1
+        current_enum = oracle.enum_count
+        
         # Convert RuleNode to Julia expression using HerbGrammar
         candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
+        candidate_readable = string(candidate_expr)
         
-        # DEBUG: Print candidate expression
-        println("[Z3Oracle] Candidate expression: $(candidate_expr)")
-        
-        # Convert Julia expression to Z3 expression
-        candidate_z3 = _expr_to_z3(candidate_expr, oracle.z3_ctx, oracle.z3_vars)
-        
-        # DEBUG: Print Z3 expression
-        println("[Z3Oracle] Z3 expression: $(candidate_z3)")
-        
-        # Convert Z3 expression to SMT-LIB2 string representation
-        candidate_str = string(candidate_z3)
-        
-        # DEBUG: Print candidate SMT-LIB2 string
-        println("[Z3Oracle] Candidate SMT-LIB2: $(candidate_str)")
+        # Parse candidate to SMT-LIB2 format
+        candidate_str = CEXGeneration.candidate_to_smt2(candidate_readable)
         
         # Get the function name from the spec (assume single synthesis function)
         if isempty(oracle.spec.synth_funs)
@@ -126,29 +121,28 @@ function extract_counterexample(
         end
         func_name = oracle.spec.synth_funs[1].name
         
-        # DEBUG: Print function name
-        println("[Z3Oracle] Function name: $(func_name)")
-        println("[Z3Oracle] Original spec constraints count: $(length(oracle.spec.constraints))")
-        
         # Generate counterexample query using CEXGeneration
         candidates_dict = Dict(func_name => candidate_str)
         query = CEXGeneration.generate_cex_query(oracle.spec, candidates_dict)
         
-        # DEBUG: Print query
-        println("[Z3Oracle] ============ SMT-LIB2 Query ============")
-        println(query)
-        println("[Z3Oracle] ============ End Query ============")
+        println("\n[ORACLE_CALL #$current_enum]")
+        println("  Candidate (Julia): $candidate_readable")
+        println("  Candidate (SMT): $candidate_str")
+
         
         # Verify the query using Z3
         result = CEXGeneration.verify_query(query)
         
-        # DEBUG: Print Z3 result status
-        println("[Z3Oracle] Z3 result status: $(result.status)")
-        println("[Z3Oracle] Z3 model: $(result.model)")
+        println("  Z3 Status: $(result.status)")
+        if result.status == :sat && !isempty(result.model)
+            println("  Model keys: $(keys(result.model))")
+            for (k, v) in result.model
+                println("    $k => $v")
+            end
+        end
         
         # If unsat, candidate is valid (no counterexample)
         if result.status == :unsat
-            println("[Z3Oracle] Result: UNSAT (candidate passes Z3 verification)")
             return nothing
         end
         
@@ -162,23 +156,17 @@ function extract_counterexample(
                 input_dict[Symbol(fv.name)] = val
             end
             
-            # Get expected output from model (if available)
-            func_key = "$(func_name)_result"
-            expected_output = get(result.model, func_key, nothing)
-            
-            # DEBUG: Print counterexample found
-            println("[Z3Oracle] Result: SAT - Counterexample found")
-            println("[Z3Oracle] Input: $(input_dict)")
-            println("[Z3Oracle] Expected output: $(expected_output)")
+            # Get expected output from spec (not the candidate!)
+            # The spec function tells us what the output SHOULD be given the constraints
+            spec_key = "$(func_name)_spec_result"
+            expected_output = get(result.model, spec_key, nothing)
             
             # Return counterexample
             return Counterexample(input_dict, expected_output, nothing)
         end
         
-        println("[Z3Oracle] Result: No counterexample extracted")
         return nothing
     catch e
-        println("[Z3Oracle] Exception caught: $(e)")
         return nothing
     end
 end

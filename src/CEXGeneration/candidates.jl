@@ -91,6 +91,11 @@ function _parse_primary(p::InfixParser)::String
         th = _parse_expr(p); _ex(p, ","); el = _parse_expr(p); _ex(p, ")")
         return "(ite $c $th $el)"
     end
+    if t == "ifelse"
+        _nx(p); _ex(p, "("); c = _parse_expr(p); _ex(p, ",")
+        th = _parse_expr(p); _ex(p, ","); el = _parse_expr(p); _ex(p, ")")
+        return "(ite $c $th $el)"
+    end
     if t == "("
         _nx(p); inner = _parse_expr(p); _ex(p, ")"); return inner
     end

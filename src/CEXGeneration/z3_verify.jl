@@ -57,37 +57,46 @@ function verify_query(query::String)::Z3Result
         error("Z3 parse error: $e")
     end
     
-    # Execute all assertions in the query by parsing through solver context
-    # The query should contain (check-sat) and (get-value ...) commands
-    # We need to manually parse the response
-    
+    # Parse Z3 response
     status = :unknown
     model = Dict{String, Any}()
     
-    # Parse Z3 response
+    # Split response into lines and parse
     lines = split(result_str, '\n')
     
-    # First pass: collect all non-sat/unsat/unknown lines to reconstruct model
-    model_lines = String[]
+    # First pass: identify satisfiability status
     for line in lines
         line = strip(line)
-        
         if line == "sat"
             status = :sat
         elseif line == "unsat"
             status = :unsat
         elseif line == "unknown"
             status = :unknown
-        elseif !isempty(line)
-            # Collect all other lines as potential model data
-            push!(model_lines, line)
         end
     end
     
-    # Reconstruct model from lines (handle multi-line output)
-    if status == :sat && !isempty(model_lines)
-        model_str = join(model_lines, " ")
-        _parse_model_line(model_str, model)
+    # If status is unsat, return immediately with empty model
+    # (errors that follow are expected - get-value commands fail on unsat)
+    if status == :unsat
+        return Z3Result(:unsat, Dict{String, Any}())
+    end
+    
+    # For sat status, try to extract model from non-error lines
+    if status == :sat
+        model_lines = String[]
+        for line in lines
+            line = strip(line)
+            if !isempty(line) && !startswith(line, "(error") && line ∉ ("sat", "unsat", "unknown")
+                push!(model_lines, line)
+            end
+        end
+        
+        # Parse model if we have data
+        if !isempty(model_lines)
+            model_str = join(model_lines, " ")
+            _parse_model_line(model_str, model)
+        end
     end
     
     Z3Result(status, model)
@@ -95,22 +104,45 @@ end
 
 """
 Parse a model line from Z3 output.
-Handles formats like: ((x1 10) (x2 5) (x3 0)) or ((x1 10) (x2 5) ((fnd_sum x1 x2 x3) 15))
+Handles formats like: 
+- ((x0 5) (x1 -3) (x2 0))  — plain integers
+- ((x0 (- 5)) (x1 (- 3)))  — S-expression negatives
+- (((fnd_sum x0 x1) 15))   — function call results
+- (((fnd_sum_spec x0 x1) 0)) — spec function results
 """
 function _parse_model_line(line::String, model::Dict)::Nothing
-    # Simple variable pattern: (name value)
-    var_pattern = r"\((\w+)\s+(-?\d+)\)"
-    for match in eachmatch(var_pattern, line)
+    # Parse S-expression negative numbers: (- 5) → -5
+    sexp_neg_pattern = r"\((\w+)\s+\(\s*-\s+(\d+)\)\)"
+    for match in eachmatch(sexp_neg_pattern, line)
         name = match.captures[1]
-        val = parse(Int, match.captures[2])
+        val = -parse(Int, match.captures[2])
         model[name] = val
     end
     
-    # Function call pattern: ((func arg1 arg2) value) 
-    func_pattern = r"\(\((\w+)\s+[^)]*\)\s+(-?\d+)\)"
-    for match in eachmatch(func_pattern, line)
+    # Parse plain integers: (name value)
+    plain_int_pattern = r"\((\w+)\s+(-?\d+)\)"
+    for match in eachmatch(plain_int_pattern, line)
+        name = match.captures[1]
+        # Skip if already parsed as S-expr negative
+        if !haskey(model, name)
+            val = parse(Int, match.captures[2])
+            model[name] = val
+        end
+    end
+    
+    # Function call pattern: ((func arg1 arg2) value) or ((func arg1 arg2) (- value))
+    func_plain_pattern = r"\(\((\w+)\s+[^)]*\)\s+(-?\d+)\)"
+    for match in eachmatch(func_plain_pattern, line)
         func = match.captures[1]
         val = parse(Int, match.captures[2])
+        model["$(func)_result"] = val
+    end
+    
+    # Function call with S-expr negative: ((func ...) (- value))
+    func_neg_pattern = r"\(\((\w+)\s+[^)]*\)\s+\(\s*-\s+(\d+)\)\)"
+    for match in eachmatch(func_neg_pattern, line)
+        func = match.captures[1]
+        val = -parse(Int, match.captures[2])
         model["$(func)_result"] = val
     end
     

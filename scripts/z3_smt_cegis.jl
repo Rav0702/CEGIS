@@ -12,10 +12,11 @@ Differences from semantic_smt_cegis.jl:
 - Verifies with native Z3 (no subprocess, native API)
 
 Usage:
-    julia z3_smt_cegis.jl [spec_file.sl] [max_depth] [max_enumerations]
+    julia z3_smt_cegis.jl [spec_file.sl] [max_depth] [max_enumerations] [candidate_to_test]
 
-Example:
+Examples:
     julia z3_smt_cegis.jl ../spec_files/findidx_problem.sl 8 5000000
+    julia z3_smt_cegis.jl ../spec_files/findidx_2_simple.sl 4 500000 "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ Build a synthesis grammar from a SyGuS specification file.
 Uses CEXGeneration to parse the spec and extract variable information.
 
 The grammar separates IntExpr (returns Int) from BoolExpr (returns Bool) to ensure
-the synthesis function returns the correct type.
+the synthesis function returns the correct type. This is generic for any spec.
 """
 function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     spec = CEXGeneration.parse_spec_from_file(spec_file)
@@ -68,33 +69,33 @@ function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     println("Free variables in spec: $var_names")
     
     # Build grammar with separate Int and Bool expressions
-    # The synthesis target (Expr) returns Int
+    # The synthesis target (Expr) returns Int (or Bool depending on spec's output sort)
     grammar_str = "@csgrammar begin\n"
     
-    # Expr: Integer expressions (can be returned by synthesis function)
-    for i in 0:5
+    # Expr: Integer expressions (main synthesis target)
+    for i in 0:3
         grammar_str *= "    Expr = $i\n"
     end
     
-    # Add variables to IntExpr
+    # Add variables to Expr
     for var in var_names
         grammar_str *= "    Expr = $var\n"
     end
     
     # Arithmetic operations return Int
     grammar_str *= "    Expr = Expr + Expr\n"
-    grammar_str *= "    Expr = Expr - Expr\n"
-    grammar_str *= "    Expr = Expr * Expr\n"
+    # grammar_str *= "    Expr = Expr - Expr\n"
+    # grammar_str *= "    Expr = Expr * Expr\n"
     
-    # # If-then-else for integer expressions
-    # grammar_str *= "    Expr = ifelse(BoolExpr, Expr, Expr)\n"
+    # If-then-else for integer expressions
+    # This is essential for synthesis problems that need case analysis
+    grammar_str *= "    Expr = ifelse(BoolExpr, Expr, Expr)\n"
     
-    # # BoolExpr: Boolean expressions (for conditions only)
-    # # Integer constants for Bool literals
-    # grammar_str *= "    BoolExpr = true\n"
-    # grammar_str *= "    BoolExpr = false\n"
+    # BoolExpr: Boolean expressions (for conditions)
+    grammar_str *= "    BoolExpr = true\n"
+    grammar_str *= "    BoolExpr = false\n"
     
-    # Comparisons
+    # Comparisons return Bool
     grammar_str *= "    BoolExpr = Expr < Expr\n"
     grammar_str *= "    BoolExpr = Expr > Expr\n"
     grammar_str *= "    BoolExpr = Expr >= Expr\n"
@@ -102,9 +103,101 @@ function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     # grammar_str *= "    BoolExpr = Expr == Expr\n"
     # grammar_str *= "    BoolExpr = Expr != Expr\n"
     
+    # Boolean connectives
+    # grammar_str *= "    BoolExpr = BoolExpr && BoolExpr\n"
+    # grammar_str *= "    BoolExpr = BoolExpr || BoolExpr\n"
+    # grammar_str *= "    BoolExpr = !(BoolExpr)\n"
+    
     grammar_str *= "end\n"
     
     return eval(Meta.parse(grammar_str))
+end
+
+"""
+    test_candidate_directly(spec_file::String, candidate_str::String, oracle, current_counterexamples::Vector)
+
+Test a single candidate program:
+1. Show current counterexamples
+2. Evaluate the candidate against each counterexample using the grammar
+3. Run Z3 verification to check SMT constraints
+"""
+function test_candidate_directly(spec_file::String, candidate_str::String, oracle, current_counterexamples::Vector)
+    println("\n" * "="^80)
+    println("🎯 TESTING PROVIDED CANDIDATE")
+    println("="^80)
+    println("Candidate string: $candidate_str")
+    println()
+    
+    # Show current counterexamples
+    if !isempty(current_counterexamples)
+        println("Current counterexamples (to be satisfied):")
+        for (i, cx) in enumerate(current_counterexamples)
+            println("  [$i] Input: $(cx.input) => Expected: $(cx.expected_output)")
+        end
+        println()
+    end
+    
+    try
+        # Run Z3 verification on SMT constraints
+        println("Running Z3 formal verification...")
+        spec = oracle.spec
+        func_name = spec.synth_funs[1].name
+        
+        # Convert candidate to SMT-LIB2 and display
+        candidate_smt = CEXGeneration.candidate_to_smt2(candidate_str)
+        println("  Candidate (SMT): $candidate_smt")
+        
+        candidates_dict = Dict(func_name => candidate_smt)
+        query = CEXGeneration.generate_cex_query(spec, candidates_dict)
+        result = CEXGeneration.verify_query(query)
+        
+        println("  Z3 Status: $(result.status)")
+        
+        if result.status == :unsat
+            println("  ✅ Z3: VALID - Candidate satisfies all SMT constraints!")
+            println("="^80 * "\n")
+            return (:valid, nothing)
+        elseif result.status == :sat
+            println("  ❌ Z3: INVALID - Found counterexample violating constraints")
+            
+            if !isempty(result.model)
+                # Extract model safely
+                try
+                    input_dict = Dict{Symbol, Any}()
+                    for fv in spec.free_vars
+                        val = get(result.model, fv.name, 0)
+                        input_dict[Symbol(fv.name)] = val
+                    end
+                    spec_key = "$(func_name)_spec_result"
+                    expected_output = get(result.model, spec_key, nothing)
+                    
+                    println("  Model Input: $input_dict")
+                    println("  Expected (from spec): $expected_output")
+                    println("="^80 * "\n")
+                    
+                    return (:invalid, Counterexample(input_dict, expected_output, nothing))
+                catch mex
+                    println("  (Could not extract full model: $mex)")
+                end
+            end
+        else
+            println("  ⚠️  Z3: Unknown status")
+        end
+        
+        println("="^80 * "\n")
+        return (:error, nothing)
+        
+    catch e
+        println("❌ ERROR during candidate testing:")
+        println("   $e")
+        println()
+        # Print full stacktrace for debugging
+        Base.showerror(stderr, e)
+        println()
+        println("="^80 * "\n")
+    end
+    
+    return (:error, nothing)
 end
 
 """
@@ -234,17 +327,32 @@ end
 spec_file = isempty(ARGS) ? "../spec_files/findidx_problem.sl" : ARGS[1]
 max_depth = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 6
 max_enumerations = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 50_000
+candidate_to_test = length(ARGS) >= 4 ? ARGS[4] : nothing
 
 println("Z3 CEGIS Synthesis Script")
 println(repeat("=", 80))
 println("Spec file:        $spec_file")
 println("Max depth:        $max_depth")
 println("Max enumerations: $max_enumerations")
+if candidate_to_test !== nothing
+    println("Test candidate:   $candidate_to_test")
+end
 println(repeat("=", 80))
 println()
 
 try
+    # Build grammar and oracle
+    grammar = build_grammar_from_spec_file(spec_file)
+    oracle = Z3Oracle(spec_file, grammar)
+    
+    # Run main CEGIS synthesis
     result = run_z3_cegis(spec_file; max_depth = max_depth, max_enumerations = max_enumerations)
+    
+    # If a candidate was provided, test it with counterexamples found by synthesis
+    if candidate_to_test !== nothing && result !== nothing
+        println("\n📌 Testing provided candidate with counterexamples found by synthesis...\n")
+        test_candidate_directly(spec_file, candidate_to_test, oracle, result.counterexamples)
+    end
     
     if result !== nothing && result.status == CEGIS.cegis_success
         exit(0)  # Success
