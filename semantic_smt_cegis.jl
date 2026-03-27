@@ -36,7 +36,6 @@ using .CEGIS
 include("parse_sygus.jl")
 include("rulenode_to_symbolics.jl")
 include("semantic_smt_oracle.jl")
-include("oracle_synth.jl")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper functions

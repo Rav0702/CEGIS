@@ -80,20 +80,34 @@ function parse_implication_constraint(constraint::String)::Union{Tuple{String, S
     # Now extract just the value from (= (findIdx x0 x1 k) VALUE)
     # Get everything between the last two closing parens
     consequent_str = strip(constraint[conseq_start:conseq_end])
-    # consequent_str is like: (= (findIdx x0 x1 k) 0)
+    # consequent_str is like: (= (findIdx x0 x1 k) 0) or (= (fnd_sum x1 x2 x3) (+ x1 x2))
     
-    # Find the position of the value (last token before final paren)
-    # Remove the outer parens first
+    # Find the value by parsing: after the function call, extract everything until the final paren
+    # Remove the outer (= ... ) wrapper
     inner = strip(consequent_str[2:end-1])  # Remove (= ... )
     
-    # Now inner is like: (findIdx x0 x1 k) 0
-    # Find the last space
-    last_space = findlast(' ', inner)
-    if last_space === nothing
-        return nothing
+    # Now inner is like: (fnd_sum x0 x1 k) 0  or  (fnd_sum x1 x2 x3) (+ x1 x2)
+    # We need to extract the second part (everything after the closing paren of the first s-expr)
+    
+    # Find where the function call ends (when depth returns to 0)
+    depth = 0
+    func_end = -1
+    for j in 1:length(inner)
+        if inner[j] == '('
+            depth += 1
+        elseif inner[j] == ')'
+            depth -= 1
+            if depth == 0
+                func_end = j
+                break
+            end
+        end
     end
     
-    expected_value = strip(inner[last_space+1:end])
+    func_end == -1 && return nothing
+    
+    # Everything after func_end is the expected value, strip whitespace
+    expected_value = strip(inner[func_end+1:end])
     
     return (condition, expected_value)
 end

@@ -13,10 +13,21 @@ Fields:
 - constraints::Vector{NamedTuple}: Each constraint has:
   - lhs: Left-hand side of implication (the precondition)
   - rhs_out: Expected output value (can be integer or S-expression string)
+- functions::Dict{String, NamedTuple}: Defined functions (define-fun); each has:
+  - params::Vector{Symbol}: Parameter names
+  - param_types::Vector{String}: Parameter types
+  - return_type::String: Return type
+  - body::String: Function body as S-expression string
+- declared_functions::Dict{String, NamedTuple}: Declared functions (declare-fun); each has:
+  - param_types::Vector{String}: Parameter types
+  - return_type::String: Return type
+  - body::String: Empty string (uninterpreted)
 """
 struct SMTSpec
     vars::Vector{Symbol}
     constraints::Vector{NamedTuple}
+    functions::Dict{String, NamedTuple}
+    declared_functions::Dict{String, NamedTuple}
 end
 
 """
@@ -26,6 +37,8 @@ Parse a SyGuS (.sl) file and return an SMTSpec object.
 
 Extracts:
 - Variable declarations: (declare-var name Type)
+- Function definitions: (define-fun name ((params)) ReturnType body)
+- Function declarations: (declare-fun name (ParamTypes...) ReturnType)
 - Constraints: (constraint (=> condition (= (func ...) output)))
 """
 function parse_sygus(filepath::String)
@@ -38,6 +51,11 @@ function parse_sygus(filepath::String)
         push!(vars, Symbol(match.captures[1]))
     end
     
+    # Extract function definitions
+    functions = extract_define_fun(content)
+    
+    # Extract declared functions
+    declared_functions = extract_declare_fun(content)
     # Extract constraints
     constraints = []
     
@@ -115,7 +133,235 @@ function parse_sygus(filepath::String)
         end
     end
     
-    return SMTSpec(vars, constraints)
+    return SMTSpec(vars, constraints, functions, declared_functions)
+end
+
+"""
+    extract_define_fun(content::String)
+
+Extract all (define-fun ...) declarations from SyGuS file content.
+
+Returns a Dict mapping function names to their definitions.
+Each definition is a NamedTuple with:
+- params::Vector{Symbol}: Parameter names
+- param_types::Vector{String}: Parameter types  
+- return_type::String: Return type
+- body::String: Function body as S-expression string
+"""
+function extract_define_fun(content::String)
+    functions = Dict{String, NamedTuple}()
+    
+    # Pattern: (define-fun name ((param1 Type1) ... (paramN TypeN)) ReturnType body)
+    # We'll parse this more carefully than a simple regex
+    
+    lines = split(content, "\n")
+    i = 1
+    while i <= length(lines)
+        line = strip(lines[i])
+        
+        if startswith(line, "(define-fun")
+            # Extract function definition
+            # Start collecting the full definition (may span multiple lines)
+            full_def = line
+            paren_count = count(c -> c == '(', line) - count(c -> c == ')', line)
+            
+            # Keep adding lines until we have balanced parentheses
+            i += 1
+            while i <= length(lines) && paren_count > 0
+                full_def *= " " * strip(lines[i])
+                paren_count += count(c -> c == '(', lines[i]) - count(c -> c == ')', lines[i])
+                i += 1
+            end
+            
+            # Now parse the full definition
+            try
+                parse_define_fun_line(String(full_def), functions)
+            catch e
+                # Silently skip malformed define-fun lines
+                @warn "Skipped malformed define-fun declaration"
+            end
+        else
+            i += 1
+        end
+    end
+    
+    return functions
+end
+
+"""
+    parse_define_fun_line(line::String, functions::Dict)
+
+Parse a single (define-fun ...) declaration and add to functions dict.
+"""
+function parse_define_fun_line(line::String, functions::Dict)
+    # Pattern: (define-fun name ((param1 Type1) ... (paramN TypeN)) ReturnType body)
+    
+    # Extract name
+    name_match = match(r"\(define-fun\s+(\w+)\s+", line)
+    if name_match === nothing
+        return
+    end
+    name = name_match.captures[1]
+    
+    # Find the parameters section: ((param1 Type1) ... (paramN TypeN))
+    # First find the opening (( 
+    params_start_idx = findfirst("((", line)
+    if params_start_idx === nothing
+        return
+    end
+    
+    # Find matching )) 
+    idx = params_start_idx[end]
+    paren_depth = 1
+    params_end_idx = idx
+    
+    while params_end_idx <= length(line)
+        if line[params_end_idx] == '('
+            paren_depth += 1
+        elseif line[params_end_idx] == ')'
+            paren_depth -= 1
+            if paren_depth == 0
+                break
+            end
+        end
+        params_end_idx += 1
+    end
+    
+    # Extract parameter content: everything between (( and ))
+    # params_start_idx[1] is the position of the first ( in ((
+    # We want from the second ( to the first ) of the closing ))
+    params_section = line[params_start_idx[1]+1:params_end_idx-1]
+    
+    # Parse parameters
+    param_names = Symbol[]
+    param_types = String[]
+    
+    # Split by ) ( to find individual parameter declarations
+    param_matches = eachmatch(r"\((\w+)\s+(\w+)\)", params_section)
+    for pm in param_matches
+        push!(param_names, Symbol(pm.captures[1]))
+        push!(param_types, pm.captures[2])
+    end
+    
+    # Find return type: it comes right after ) ) Type
+    rest_after_params = line[params_end_idx+1:end]
+    return_type_match = match(r"^\s*(\w+)\s+", rest_after_params)
+    if return_type_match === nothing
+        return
+    end
+    return_type = return_type_match.captures[1]
+    
+    # Find function body: everything after the return type until final )
+    body_start_pos = params_end_idx + length(return_type_match.match)
+    # The body is everything until the last )
+    body = strip(line[body_start_pos:end-1])
+    
+    # Store the function definition
+    functions[name] = (
+        params=param_names,
+        param_types=param_types,
+        return_type=return_type,
+        body=body
+    )
+end
+
+"""
+    extract_declare_fun(content::String)
+
+Extract all (declare-fun ...) declarations from SyGuS file content.
+
+Returns a Dict mapping function names to their signatures.
+Each signature is a NamedTuple with:
+- param_types::Vector{String}: Parameter types
+- return_type::String: Return type
+- body::String: Empty string (uninterpreted)
+"""
+function extract_declare_fun(content::String)
+    declared = Dict{String, NamedTuple}()
+    
+    # Pattern: (declare-fun name (Type1 Type2 ...) ReturnType)
+    # Note: declare-fun does NOT have parameter names, just types
+    
+    lines = split(content, "\n")
+    for line in lines
+        line = strip(line)
+        
+        if startswith(line, "(declare-fun")
+            try
+                parse_declare_fun_line(String(line), declared)
+            catch e
+                # Silently skip malformed declare-fun lines
+                @warn "Skipped malformed declare-fun declaration"
+            end
+        end
+    end
+    
+    return declared
+end
+
+"""
+    parse_declare_fun_line(line::String, declared::Dict)
+
+Parse a single (declare-fun ...) declaration and add to declared dict.
+"""
+function parse_declare_fun_line(line::String, declared::Dict)
+    # Pattern: (declare-fun name (Type1 Type2 ...) ReturnType)
+    
+    # Extract name
+    name_match = match(r"\(declare-fun\s+(\w+)\s+", line)
+    if name_match === nothing
+        return
+    end
+    name = name_match.captures[1]
+    
+    # Find the parameter types section: (Type1 Type2 ...)
+    offset_after_name = name_match.offset + length(name_match.match)
+    next_paren_range = findnext("(", line, offset_after_name)
+    if next_paren_range === nothing
+        return
+    end
+    
+    start_pos = next_paren_range[1]
+    
+    # Find matching closing paren
+    paren_count = 0
+    end_pos = start_pos
+    
+    while end_pos <= length(line)
+        if line[end_pos] == '('
+            paren_count += 1
+        elseif line[end_pos] == ')'
+            paren_count -= 1
+            if paren_count == 0
+                break
+            end
+        end
+        end_pos += 1
+    end
+    
+    # Extract parameter types: everything between ( and )
+    params_section = line[start_pos+1:end_pos-1]
+    
+    # Parse parameter types (space-separated)
+    param_types = String[]
+    if !isempty(strip(params_section))
+        param_types = String.(split(strip(params_section)))
+    end
+    
+    # Find return type: it comes right after ) Type)
+    rest_after_params = line[end_pos+1:end]
+    return_type_match = match(r"^\s+(\w+)\s*\)", rest_after_params)
+    if return_type_match === nothing
+        return
+    end
+    return_type = return_type_match.captures[1]
+    
+    # Store the function declaration (no body for uninterpreted functions)
+    declared[name] = (
+        param_types=param_types,
+        return_type=return_type,
+        body=""
+    )
 end
 
 """

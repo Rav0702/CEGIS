@@ -25,7 +25,6 @@ function synth_with_oracle(
     global_best_program = nothing
     global_best_satisfied = 0
     symboltable = grammar2symboltable(grammar, mod)
-    is_semantic_oracle = string(typeof(oracle)) == "SemanticSMTOracle"
 
     count_satisfied(prog::RuleNode)::Int = begin
         isempty(problem.spec) && return 0
@@ -47,6 +46,9 @@ function synth_with_oracle(
     solver = GenericSolver(grammar, start_symbol; max_depth)
     iterator = BFSIterator(; solver, max_depth)
     iter, num_enum = 0, 0
+    
+    # Target solution for debug checking
+    target_solution_str = "(k >= x0) + (k >= x1)"
 
     for candidate_program in iterator
         num_enum += 1
@@ -61,13 +63,32 @@ function synth_with_oracle(
                     satisfied_examples=global_best_satisfied)
         end
         
-        num_enum % 10000 == 0 && println("[enum=$num_enum] checking: $(rulenode2expr(candidate_program, grammar)) | spec size=$(length(problem.spec))")
+        expr_str = string(rulenode2expr(candidate_program, grammar))
+        num_enum % 10000 == 0 && println("[enum=$num_enum] checking: $expr_str | spec size=$(length(problem.spec))")
+        
+        # DEBUG: Check if this is the target solution
+        if expr_str == target_solution_str
+            println("\n" * "="^80)
+            println("DEBUG: Found target solution at enum=$(num_enum)")
+            println("Expression: $expr_str")
+            println("="^80 * "\n")
+        end
         
         expr = rulenode2expr(candidate_program, grammar)
-        score = is_semantic_oracle || isempty(problem.spec) ? 1.0 :
+        # Always check IO examples first, regardless of oracle type
+        # This is essential for CEGIS - the oracle is for verification, not initial testing
+        score = isempty(problem.spec) ? 1.0 :
                 HerbSearch.evaluate(problem, expr, symboltable; shortcircuit, allow_evaluation_errors)
 
+        if expr_str == target_solution_str
+            println("[enum=$num_enum] TARGET DEBUG: score from IO examples = $score, spec size = $(length(problem.spec))")
+        end
+
         score != 1 && continue
+        
+        if expr_str == target_solution_str
+            println("[enum=$num_enum] TARGET DEBUG: Passed IO examples score check (score=$score)")
+        end
         
         candidate_program = freeze_state(candidate_program)
         candidate_expr = rulenode2expr(candidate_program, grammar)
@@ -78,14 +99,35 @@ function synth_with_oracle(
             global_best_program = candidate_program
         end
 
-        passes_all_examples(candidate_expr) || continue
+        passes = passes_all_examples(candidate_expr)
+        if expr_str == target_solution_str
+            println("[enum=$num_enum] TARGET DEBUG: passes_all_examples = $passes")
+        end
+        
+        passes || continue
+        
+        if expr_str == target_solution_str
+            println("[enum=$num_enum] TARGET DEBUG: Calling oracle extract_counterexample with Z3...")
+        end
         
         oracle_problem = CEGISProblem(grammar, start_symbol, problem.spec,
                                       (_, _) -> VerificationResult(CEGIS.verified, nothing))
         cx = extract_counterexample(oracle, oracle_problem, candidate_program)
+        
+        if expr_str == target_solution_str
+            if cx === nothing
+                println("[enum=$num_enum] TARGET DEBUG: Oracle returned NO counterexample - SOLUTION VERIFIED!")
+            else
+                println("[enum=$num_enum] TARGET DEBUG: Oracle returned counterexample:")
+                println("  Input: $(cx.input)")
+                println("  Expected: $(cx.expected_output)")
+                println("  Actual: $(cx.actual_output)")
+            end
+        end
 
         if cx === nothing
             println("[enum=$num_enum] SUCCESS: Found candidate satisfying all examples!")
+            println("[enum=$num_enum] Candidate: $(rulenode2expr(candidate_program, grammar))")
             return (result=CEGISResult(CEGIS.cegis_success, candidate_program, iter, counterexamples),
                     satisfied_examples=current_satisfied)
         end

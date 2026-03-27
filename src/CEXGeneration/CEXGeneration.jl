@@ -25,7 +25,9 @@ module CEXGeneration
 
 export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        candidate_to_smt2, serialize_spec, deserialize_spec,
-       verify_query, Z3Result, format_result
+       verify_query, Z3Result, format_result,
+       AbstractCandidateParser, InfixCandidateParser, SymbolicCandidateParser,
+       to_smt2, set_default_candidate_parser, get_default_candidate_parser
 
 using Serialization, Z3
 

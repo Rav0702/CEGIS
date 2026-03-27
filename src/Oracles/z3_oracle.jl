@@ -31,8 +31,11 @@ Fields:
 - `z3_ctx::Z3.Context` — Z3 context for expression building
 - `z3_vars::Dict{String,Z3.Expr}` — Cached Z3 variables for free variables
 - `mod::Module` — Module context for evaluation
+- `enum_count::Int` — Enumeration counter for debugging
+- `test_candidate::Union{String,Nothing}` — Optional candidate to test at specific enumeration
+- `parser::CEXGeneration.AbstractCandidateParser` — Pluggable parser for candidate→SMT-LIB2 conversion
 
-The oracle converts candidates to Z3 expressions, then uses Z3's string output for SMT-LIB2.
+The oracle converts candidates to Z3 expressions using the configured parser, then uses Z3's string output for SMT-LIB2.
 """
 mutable struct Z3Oracle <: AbstractOracle
     spec_file::String
@@ -43,10 +46,11 @@ mutable struct Z3Oracle <: AbstractOracle
     mod::Module
     enum_count::Int              # Track enumeration count
     test_candidate::Union{String,Nothing}  # Candidate to test at enumeration 1000
+    parser::CEXGeneration.AbstractCandidateParser  # Pluggable candidate parser
 end
 
 """
-    Z3Oracle(spec_file::String, grammar::AbstractGrammar; mod::Module = Main)
+    Z3Oracle(spec_file::String, grammar::AbstractGrammar; mod::Module = Main, parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser())
 
 Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 
@@ -54,6 +58,7 @@ Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 - `spec_file::String` — Path to SyGuS specification (.sl file)
 - `grammar::AbstractGrammar` — Grammar for candidate generation
 - `mod::Module` — Module context (default: Main)
+- `parser::CEXGeneration.AbstractCandidateParser` — Candidate parser implementation (default: InfixCandidateParser)
 
 # Returns
 - `Z3Oracle` instance with parsed specification and Z3 context
@@ -61,12 +66,14 @@ Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 # Example
 ```
 oracle = Z3Oracle("problem.sl", grammar)
+oracle2 = Z3Oracle("problem.sl", grammar, parser=SymbolicCandidateParser())
 ```
 """
 function Z3Oracle(
     spec_file::String,
     grammar::AbstractGrammar;
-    mod::Module = Main
+    mod::Module = Main,
+    parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser()
 )
     # CEXGeneration is included in parent CEGIS module before this file is included
     spec = try
@@ -88,7 +95,7 @@ function Z3Oracle(
         end
     end
     
-    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing)
+    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing, parser)
 end
 
 """
@@ -112,8 +119,8 @@ function extract_counterexample(
         candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
         candidate_readable = string(candidate_expr)
         
-        # Parse candidate to SMT-LIB2 format
-        candidate_str = CEXGeneration.candidate_to_smt2(candidate_readable)
+        # Parse candidate to SMT-LIB2 format using injected parser
+        candidate_str = CEXGeneration.to_smt2(oracle.parser, candidate_readable)
         
         # Get the function name from the spec (assume single synthesis function)
         if isempty(oracle.spec.synth_funs)

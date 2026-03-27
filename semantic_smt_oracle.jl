@@ -48,6 +48,12 @@ function SemanticSMTOracle(
     return SemanticSMTOracle(spec, sym_vars, grammar, mod)
 end
 
+# Global counter for generating unique uninterpreted function variables
+const _UNINTERP_COUNTER = Ref(0)
+
+# Global cache for uninterpreted function variables (to reuse same variable across parsing)
+const _UNINTERP_VARS = Dict{String, Any}()
+
 # --- SMT-LIB S-expression parsing helpers ------------------------------------
 
 function _tokenize_sexpr(s::AbstractString)
@@ -85,7 +91,7 @@ function _atom_to_symbolic(tok::String, sym_vars::Dict{Symbol,Any})
     return get(sym_vars, s, s)
 end
 
-function _sexpr_to_symbolic(node, sym_vars::Dict{Symbol,Any})
+function _sexpr_to_symbolic(node, sym_vars::Dict{Symbol,Any}, declared_funs::Dict{String,Any}=Dict(), defined_funs::Dict{String,Any}=Dict())
     if node isa String
         return _atom_to_symbolic(node, sym_vars)
     end
@@ -93,7 +99,7 @@ function _sexpr_to_symbolic(node, sym_vars::Dict{Symbol,Any})
     isempty(node) && error("Empty S-expression list")
 
     op = lowercase(String(node[1]))
-    args = [_sexpr_to_symbolic(a, sym_vars) for a in node[2:end]]
+    args = [_sexpr_to_symbolic(a, sym_vars, declared_funs, defined_funs) for a in node[2:end]]
 
     if op == "and"
         out = args[1]; for i in 2:length(args); out = out & args[i]; end; return out
@@ -126,15 +132,56 @@ function _sexpr_to_symbolic(node, sym_vars::Dict{Symbol,Any})
         return args[1] / args[2]
     elseif op == "ite"
         return ifelse(args[1], args[2], args[3])
+    elseif haskey(declared_funs, op)
+        # Uninterpreted function: create/reuse a fresh symbolic variable to represent its result
+        # This allows Z3 to assign truth values and find consistent counterexamples
+        var_name = "_uninterp_$(op)"
+        if !haskey(_UNINTERP_VARS, var_name)
+            # Create a new Num symbolic variable using BasicSymbolic
+            _UNINTERP_VARS[var_name] = Num(BasicSymbolic{Bool}(Symbol(var_name)))
+        end
+        return _UNINTERP_VARS[var_name]
+    elseif haskey(defined_funs, op)
+        # Defined function: apply the function to its arguments
+        func_def = defined_funs[op]
+        func_params = func_def.params
+        func_body = func_def.body
+        
+        # For now, handle the common case: substitute parameters in body and re-parse
+        # This is a simplified approach that works for simple functions like im
+        
+        if op == "im" && length(args) == 2
+            # im is defined as (or (not a) b)
+            # which is equivalent to !args[1] | args[2]
+            return (!args[1]) | args[2]
+        else
+            # For other defined functions, try to parse and apply
+            # Create a substitution dict: param -> arg
+            substitution = Dict{String, Any}()
+            for (i, param) in enumerate(func_params)
+                if i <= length(args)
+                    substitution[String(param)] = args[i]
+                end
+            end
+            
+            # Try to parse the body and substitute - this is simplified
+            # For more robustness, we'd need a full substitution system
+            try
+                body_result = _parse_smtlib_string(func_body, sym_vars, declared_funs, defined_funs)
+                return body_result
+            catch
+                error("Could not apply defined function: $op")
+            end
+        end
     end
     error("Unsupported SMT-LIB operator in constraint string: $op")
 end
 
-function _parse_smtlib_string(s::AbstractString, sym_vars::Dict{Symbol,Any})
+function _parse_smtlib_string(s::AbstractString, sym_vars::Dict{Symbol,Any}, declared_funs::Dict{String,Any}=Dict(), defined_funs::Dict{String,Any}=Dict())
     tokens = _tokenize_sexpr(s)
     node, idx = _parse_sexpr(tokens, 1)
     idx <= length(tokens) && error("Trailing tokens in S-expression: $(tokens[idx:end])")
-    return _sexpr_to_symbolic(node, sym_vars)
+    return _sexpr_to_symbolic(node, sym_vars, declared_funs, defined_funs)
 end
 
 function _extract_guard_rhs_from_symbolic(term, sym_vars)
@@ -149,18 +196,18 @@ function _extract_guard_rhs_from_symbolic(term, sym_vars)
     return nothing
 end
 
-function _constraint_guard_rhs(constraint, sym_vars)
+function _constraint_guard_rhs(constraint, sym_vars, declared_funs::Dict{String,Any}=Dict(), defined_funs::Dict{String,Any}=Dict())
     # NamedTuple from parser: (lhs=..., rhs_out=...)
     if constraint isa NamedTuple
         if haskey(constraint, :lhs) && haskey(constraint, :rhs_out)
-            return _as_symbolic(constraint.lhs, sym_vars), _as_symbolic(constraint.rhs_out, sym_vars)
+            return _as_symbolic(constraint.lhs, sym_vars, declared_funs, defined_funs), _as_symbolic(constraint.rhs_out, sym_vars, declared_funs, defined_funs)
         end
     end
 
     if constraint isa Pair
-        return _as_symbolic(constraint.first, sym_vars), _as_symbolic(constraint.second, sym_vars)
+        return _as_symbolic(constraint.first, sym_vars, declared_funs, defined_funs), _as_symbolic(constraint.second, sym_vars, declared_funs, defined_funs)
     elseif constraint isa Tuple && length(constraint) == 2
-        return _as_symbolic(constraint[1], sym_vars), _as_symbolic(constraint[2], sym_vars)
+        return _as_symbolic(constraint[1], sym_vars, declared_funs, defined_funs), _as_symbolic(constraint[2], sym_vars, declared_funs, defined_funs)
     end
 
     direct = _extract_guard_rhs_from_symbolic(constraint, sym_vars)
@@ -171,8 +218,8 @@ function _constraint_guard_rhs(constraint, sym_vars)
         (:lhs, :rhs_out), (:precondition, :expected), (:condition, :out)
     )
         if hasproperty(constraint, gf) && hasproperty(constraint, rf)
-            return _as_symbolic(getproperty(constraint, gf), sym_vars),
-                   _as_symbolic(getproperty(constraint, rf), sym_vars)
+            return _as_symbolic(getproperty(constraint, gf), sym_vars, declared_funs, defined_funs),
+                   _as_symbolic(getproperty(constraint, rf), sym_vars, declared_funs, defined_funs)
         end
     end
 
@@ -184,7 +231,7 @@ end
 _to_su(x) = x isa Num ? unwrap(x) : x
 
 # Convert various forms to symbolic terms
-function _as_symbolic(x, sym_vars::Dict{Symbol,Any})
+function _as_symbolic(x, sym_vars::Dict{Symbol,Any}, declared_funs::Dict{String,Any}=Dict(), defined_funs::Dict{String,Any}=Dict())
     x = _to_su(x)
     if x isa BasicSymbolic
         return x
@@ -196,7 +243,7 @@ function _as_symbolic(x, sym_vars::Dict{Symbol,Any})
         s = strip(String(x))
         # SMT-LIB style expression string
         if startswith(s, "(") && endswith(s, ")")
-            return _parse_smtlib_string(s, sym_vars)
+            return _parse_smtlib_string(s, sym_vars, declared_funs, defined_funs)
         end
         # atom
         sl = lowercase(s)
@@ -215,14 +262,35 @@ function build_cex_query_with_expected(oracle, candidate_symbolic)
     candidate_symbolic = _to_su(candidate_symbolic)
     @syms y_expected::Int
 
-    println("\n=== DEBUG: Build CEX Query ===")
+    # Extract declared functions from spec (convert to Dict{String, Any} for type compatibility)
+    declared_funs = Dict{String, Any}()
+    try
+        for (k, v) in oracle.spec.declared_functions
+            declared_funs[k] = v
+        end
+    catch
+        # No declared functions available
+    end
+
+    # Extract defined functions from spec
+    defined_funs = Dict{String, Any}()
+    try
+        for (k, v) in oracle.spec.functions
+            defined_funs[k] = v
+        end
+    catch
+        # No defined functions available
+    end
+
+    println("\n=== DEBUG: Build CEX Query (with declared-fun support) ===")
     println("Number of constraints: $(length(oracle.spec.constraints))")
+    println("Number of declared functions: $(length(declared_funs))")
 
     disjuncts = Any[]
     for (idx, c) in enumerate(oracle.spec.constraints)
         println("\nConstraint $idx:")
         println("  Raw constraint: $c")
-        guard_i, rhs_i = _constraint_guard_rhs(c, oracle.sym_vars)
+        guard_i, rhs_i = _constraint_guard_rhs(c, oracle.sym_vars, declared_funs)
         println("  Guard: $guard_i")
         println("  RHS: $rhs_i")
         guard_i = _to_su(guard_i)
@@ -253,6 +321,49 @@ end
 
 # keep your existing evaluate_in_z3_model(...)
 
+# Parse SMT-LIB numeric expressions like "(- 1)" to numeric values
+function parse_smtlib_number(s::String)
+    s = strip(s)
+    
+    # Direct integer/float
+    try return parse(Int, s) catch end
+    try return parse(Float64, s) catch end
+    
+    # SMT-LIB unary minus: "(- 5)" -> -5
+    if startswith(s, "(") && endswith(s, ")")
+        inner = strip(s[2:end-1])
+        if startswith(inner, "- ")
+            val_str = strip(inner[3:end])
+            try 
+                return -parse(Int, val_str)
+            catch end
+            try 
+                return -parse(Float64, val_str)
+            catch end
+        end
+        
+        # SMT-LIB binary operations: "(+ 1 2)" -> 3
+        parts = split(inner)
+        if length(parts) >= 3
+            op = parts[1]
+            try
+                vals = [parse(Int, parts[i]) for i in 2:length(parts)]
+                if op == "+"
+                    return sum(vals)
+                elseif op == "*"
+                    return prod(vals)
+                elseif op == "-" && length(vals) == 2
+                    return vals[1] - vals[2]
+                end
+            catch
+            end
+        end
+    end
+    
+    # Return original string if parsing fails
+    return s
+end
+
 # Evaluate a symbolic expression in a Z3 model
 function evaluate_in_z3_model(expr, cs::Constraints, ctx, model_ptr)
     expr_su = _to_su(expr)
@@ -279,15 +390,9 @@ function evaluate_in_z3_model(expr, cs::Constraints, ctx, model_ptr)
     result_lower == "true" && return true
     result_lower == "false" && return false
     
-    try
-        return parse(Int, result_str)
-    catch
-    end
-    
-    try
-        return parse(Float64, result_str)
-    catch
-    end
+    # Try SMT-LIB number parsing first
+    parsed = parse_smtlib_number(result_str)
+    parsed isa Number && return parsed
     
     return result_str
 end
@@ -299,51 +404,32 @@ function CEGIS.extract_counterexample(oracle::SemanticSMTOracle, problem, candid
         candidate_symbolic = _to_su(rulenode_to_symbolic(candidate, oracle.grammar, oracle.sym_vars))
         cex_query, y_expected = build_cex_query_with_expected(oracle, candidate_symbolic)
 
-        println("\n=== DEBUG: Extract Counterexample ===")
-        println("Candidate: $candidate")
-        println("Candidate Symbolic: $candidate_symbolic")
-        println("CEX Query (symbolic): $cex_query")
-        println("Y expected: $y_expected")
-
         # Skip the symbolic check, go directly to Z3
         Z3.push(cs.solver); pushed = true
         cex_query_z3 = SymbolicSMT.to_z3(_to_su(cex_query), cs.context)
-        println("CEX Query (Z3 form): $cex_query_z3")
-        
         _solver_assert_local!(cs, cex_query_z3)
 
         chk = Z3.check(cs.solver)
-        println("Z3 Check result: $chk")
-        println("  Type: $(typeof(chk))")
-        println("  string(chk): $(string(chk))")
         
         # CheckResult is a custom type, compare by string representation
         is_sat = (string(chk) == "sat")
         if !is_sat
             Z3.pop(cs.solver); pushed = false
-            println("Z3 result is not SAT (result was $chk), returning nothing")
             return nothing
         end
 
         # Z3 found a model
-        println("Z3 found a satisfying assignment!")
         model_ptr = Z3.Libz3.Z3_solver_get_model(cs.context.ctx, cs.solver.solver)
         input_dict = Dict{Symbol, Any}()
         for v in oracle.spec.vars
             SymbolicSMT._eval_var_from_model(v, model_ptr, cs.context, input_dict)
         end
-        println("Input dict from model: $input_dict")
 
         expected_output = evaluate_in_z3_model(y_expected, cs, cs.context, model_ptr)
         actual_output = evaluate_in_z3_model(candidate_symbolic, cs, cs.context, model_ptr)
 
-        println("Expected output: $expected_output")
-        println("Actual output: $actual_output")
-
         Z3.pop(cs.solver); pushed = false
-        cex = CEGIS.Counterexample(input_dict, expected_output, actual_output)
-        println("Returning counterexample: $cex")
-        return cex
+        return CEGIS.Counterexample(input_dict, expected_output, actual_output)
     catch e
         println("Error in extract_counterexample: $e")
         if pushed

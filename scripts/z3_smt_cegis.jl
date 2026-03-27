@@ -57,8 +57,18 @@ using .CEGIS
 Build a synthesis grammar from a SyGuS specification file.
 Uses CEXGeneration to parse the spec and extract variable information.
 
-The grammar separates IntExpr (returns Int) from BoolExpr (returns Bool) to ensure
-the synthesis function returns the correct type. This is generic for any spec.
+Grammar Structure:
+  - Expr: Returns Int (the synthesis target)
+  - BoolExpr: Returns Bool (for conditions and mixed expressions)
+
+Supports:
+  - Pure arithmetic: Expr + Expr, Expr * Expr, etc.
+  - Pure boolean: BoolExpr && BoolExpr, BoolExpr || BoolExpr, etc.
+  - Mixed (requires SymbolicCandidateParser): BoolExpr * Expr, (Expr > Expr) + Expr, etc.
+
+Note: With InfixCandidateParser, mixed expressions like (x > y) * x generate 
+invalid SMT-LIB2 (type mismatch). Use SymbolicCandidateParser to enable them with automatic 
+boolean-to-integer coercion: (ite (x > y) 1 0) * x.
 """
 function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     spec = CEXGeneration.parse_spec_from_file(spec_file)
@@ -68,12 +78,11 @@ function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     
     println("Free variables in spec: $var_names")
     
-    # Build grammar with separate Int and Bool expressions
-    # The synthesis target (Expr) returns Int (or Bool depending on spec's output sort)
+    # Build grammar with separate Int and Bool expressions, plus mixed rules
     grammar_str = "@csgrammar begin\n"
     
     # Expr: Integer expressions (main synthesis target)
-    for i in 0:3
+    for i in 0:2
         grammar_str *= "    Expr = $i\n"
     end
     
@@ -87,19 +96,25 @@ function build_grammar_from_spec_file(spec_file::String)::AbstractGrammar
     # grammar_str *= "    Expr = Expr - Expr\n"
     # grammar_str *= "    Expr = Expr * Expr\n"
     
-    # If-then-else for integer expressions
-    # This is essential for synthesis problems that need case analysis
-    grammar_str *= "    Expr = ifelse(BoolExpr, Expr, Expr)\n"
+    # Mixed boolean-numeric operations (require SymbolicCandidateParser for valid SMT-LIB2)
+    # These parse successfully but generate type warnings with InfixCandidateParser
+    grammar_str *= "    Expr = BoolExpr + Expr\n"  # Bool coerced to Int (1 or 0)
+    grammar_str *= "    Expr = Expr + BoolExpr\n"  # Bool coerced to Int
+    # grammar_str *= "    Expr = BoolExpr * Expr\n"  # Bool coerced to Int
+    # grammar_str *= "    Expr = Expr * BoolExpr\n"  # Bool coerced to Int
+    
+    # If-then-else for integer expressions (main tool for combining conditions with results)
+    # grammar_str *= "    Expr = ifelse(BoolExpr, Expr, Expr)\n"
     
     # BoolExpr: Boolean expressions (for conditions)
-    grammar_str *= "    BoolExpr = true\n"
-    grammar_str *= "    BoolExpr = false\n"
+    # grammar_str *= "    BoolExpr = true\n"
+    # grammar_str *= "    BoolExpr = false\n"
     
     # Comparisons return Bool
-    grammar_str *= "    BoolExpr = Expr < Expr\n"
-    grammar_str *= "    BoolExpr = Expr > Expr\n"
+    # grammar_str *= "    BoolExpr = Expr < Expr\n"
+    # grammar_str *= "    BoolExpr = Expr > Expr\n"
     grammar_str *= "    BoolExpr = Expr >= Expr\n"
-    grammar_str *= "    BoolExpr = Expr <= Expr\n"
+    # grammar_str *= "    BoolExpr = Expr <= Expr\n"
     # grammar_str *= "    BoolExpr = Expr == Expr\n"
     # grammar_str *= "    BoolExpr = Expr != Expr\n"
     
@@ -245,7 +260,9 @@ function run_z3_cegis(
     # Step 3: Create Z3Oracle for SMT-based verification
     # ─────────────────────────────────────────────────────────────────────────
     println("Creating Z3Oracle for formal verification...")
-    oracle = Z3Oracle(spec_file, grammar)
+    # To use a different parser, pass it as a keyword argument:
+    #   oracle = Z3Oracle(spec_file, grammar, parser=CEXGeneration.SymbolicCandidateParser())
+    oracle = Z3Oracle(spec_file, grammar, parser=CEXGeneration.SymbolicCandidateParser())
     println("Z3Oracle created and ready for synthesis\n")
     
     # ─────────────────────────────────────────────────────────────────────────
@@ -343,6 +360,8 @@ println()
 try
     # Build grammar and oracle
     grammar = build_grammar_from_spec_file(spec_file)
+    # To use a different parser, pass it as a keyword argument:
+    #   oracle = Z3Oracle(spec_file, grammar, parser=CEXGeneration.SymbolicCandidateParser())
     oracle = Z3Oracle(spec_file, grammar)
     
     # Run main CEGIS synthesis
