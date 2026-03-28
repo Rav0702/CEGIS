@@ -1,34 +1,3 @@
-"""
-    CEGIS.jl
-    =========
-
-**Counterexample-Guided Inductive Synthesis** scaffold built on top of the
-Herb.jl ecosystem.
-
-Module structure
-----------------
-
-    CEGIS
-    ├── types.jl          — Shared data types (CEGISProblem, Counterexample, …)
-    ├── synthesizer.jl    — Synthesis component  (wraps HerbSearch.synth)
-    ├── verifier.jl       — Verification component (oracle abstraction)
-    ├── counterexample.jl — Counterexample management (minimize, generalize)
-    └── learner.jl        — Constraint learning (updates grammar constraints)
-
-The CEGIS loop (`run_cegis`) orchestrates these components.  See `pipeline.jl`
-at the package root for a fully annotated pseudocode walkthrough.
-
-Dependencies on Herb packages
-------------------------------
-| Component      | Herb package(s) used                                      |
-|----------------|-----------------------------------------------------------|
-| Grammar        | HerbGrammar (ContextSensitiveGrammar, @csgrammar, …)      |
-| Program trees  | HerbCore   (RuleNode, AbstractHole, …)                    |
-| Constraints    | HerbConstraints (AbstractGrammarConstraint, solvers, …)   |
-| Interpretation | HerbInterpret  (execute_on_input, interpret, …)           |
-| Search         | HerbSearch (ProgramIterator, synth, evaluate, …)          |
-| Specification  | HerbSpecification (Problem, IOExample, SMTSpecification…) |
-"""
 module CEGIS
 
 using HerbCore
@@ -41,7 +10,11 @@ using HerbSpecification
 # ── local includes (order matters: types first) ───────────────────────────────
 include("types.jl")
 include("CEXGeneration/CEXGeneration.jl") # CEXGeneration module (needed by Z3Oracle)
-include("Oracles/Oracles.jl") # Oracle implementations & abstract interface
+include("Oracles/Oracles.jl") # Oracle implementations & abstract interface (must be before OracleFactories)
+include("Parsers/Parsers.jl") # Spec parsers (extensible)
+include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
+include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses AbstractOracle)
+include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("synthesizer.jl")
 include("verifier.jl")
 include("counterexample.jl")
@@ -54,8 +27,12 @@ include("cegis_loop.jl")     # core loop — depends on all of the above
 # ─────────────────────────────────────────────────────────────────────────────
 
 export
-    # Support modules
+    # Support modules (extensible architecture)
     CEXGeneration,
+    Parsers,
+    GrammarBuilding,
+    OracleFactories,
+    IteratorConfig,
     
     # Types
     CEGISProblem,
@@ -91,6 +68,8 @@ export
 
     # Oracle-driven synthesis
     synth_with_oracle,
+    run_synthesis,
+    check_desired_solution,
 
     # Counterexample management
     counterexample_to_ioexample,

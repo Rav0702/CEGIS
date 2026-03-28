@@ -17,6 +17,7 @@ end
 
 """Complete parsed SyGuS specification."""
 mutable struct Spec
+    file_path   :: String                              # Path to the .sl file
     logic       :: String                              # "LIA", "QF_LIA", etc.
     synth_funs  :: Vector{SynthFun}                    # Functions to synthesize
     free_vars   :: Vector{FreeVar}                     # Free variables (declare-var)
@@ -24,5 +25,5 @@ mutable struct Spec
 end
 
 """Create a default empty Spec."""
-Spec() = Spec("", SynthFun[], FreeVar[], String[])
+Spec() = Spec("", "", SynthFun[], FreeVar[], String[])
 

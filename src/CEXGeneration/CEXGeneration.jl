@@ -29,7 +29,7 @@ export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        AbstractCandidateParser, InfixCandidateParser, SymbolicCandidateParser,
        to_smt2, set_default_candidate_parser, get_default_candidate_parser
 
-using Serialization, Z3
+using Z3
 
 include("types.jl")
 include("sexp.jl")
@@ -50,7 +50,11 @@ Automatically expands inv-constraints to pre/trans/post safety properties.
 # Returns
 - `Spec` — Parsed specification with free variables, synthesis targets, and constraints
 """
-parse_spec_from_file(filename::String)::Spec = parse_sl(filename)
+function parse_spec_from_file(filename::String)::Spec
+    spec = parse_sl(filename)
+    spec.file_path = filename
+    return spec
+end
 
 """
 Generate a counterexample query for candidate solutions.
@@ -90,8 +94,12 @@ Serialize a Spec object to a binary file.
 - `spec::Spec` — Specification to serialize
 - `filename::String` — Output file path
 """
-serialize_spec(spec::Spec, filename::String) =
-    open(io -> serialize(io, spec), filename, "w")
+function serialize_spec(spec::Spec, filename::String)
+    # Use Base.Serialization to avoid dependency declaration
+    open(filename, "w") do io
+        Base.Serialization.serialize(io, spec)
+    end
+end
 
 """
 Deserialize a Spec object from a binary file.
@@ -102,7 +110,11 @@ Deserialize a Spec object from a binary file.
 # Returns
 - `Spec` — Deserialized specification
 """
-deserialize_spec(filename::String)::Spec =
-    open(io -> deserialize(io), filename, "r")
+function deserialize_spec(filename::String)::Spec
+    # Use Base.Serialization to avoid dependency declaration
+    open(filename, "r") do io
+        Base.Serialization.deserialize(io)
+    end
+end
 
 end # module

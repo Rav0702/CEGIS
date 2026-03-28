@@ -16,7 +16,7 @@ function parse_sl(filename::String)::Spec
     end
 
     exprs = read_sexprs(content)
-    spec = Spec()
+    spec = Spec(filename, "", SynthFun[], FreeVar[], String[])
 
     i = 1
     while i <= length(exprs)

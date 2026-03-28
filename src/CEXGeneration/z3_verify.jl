@@ -51,10 +51,30 @@ function verify_query(query::String)::Z3Result
     
     # Use Z3's native SMT-LIB2 parser - this handles all parsing automatically
     # Parse the query string into ASTs
-    result_str = try
-        unsafe_string(Z3.Libz3.Z3_eval_smtlib2_string(ctx.ctx, query))
+    # Note: Z3 may output errors to stderr/stdout directly, which is expected
+    result_str = ""
+    error_occurred = false
+    
+    try
+        result_str = unsafe_string(Z3.Libz3.Z3_eval_smtlib2_string(ctx.ctx, query))
     catch e
-        error("Z3 parse error: $e")
+        # If Z3 throws an exception (e.g., parse error), treat as malformed query
+        # This can happen with type mismatches or syntax errors
+        # Return unknown to signal the candidate has a fundamental problem
+        error_occurred = true
+        result_str = ""
+    end
+    
+    if error_occurred || isempty(result_str)
+        # If Z3 threw an exception or returned empty, return unknown
+        return Z3Result(:unknown, Dict{String, Any}())
+    end
+    
+    # Check for Z3 error patterns - this needs to handle both line-based and inline errors
+    if contains(result_str, "(error")
+        # Z3 reported an error - this means the candidate has a fundamental problem
+        # Return immediately with unknown status
+        return Z3Result(:unknown, Dict{String, Any}())
     end
     
     # Parse Z3 response

@@ -1,164 +1,108 @@
 """
 Generate SMT-LIB2 counterexample queries from specifications and candidate expressions.
 
+Uses fresh constants to represent valid outputs from the spec, enabling generic
+counterexample finding across all constraint types (implications, inequalities, I/O examples).
+
 Handles:
   - Substituting free variables with function parameters
   - Building check-sat queries for candidate verification
-  - Generating queries with optional safety constraints (for invariant refinement)
+  - Declaring fresh constants for spec constraint verification
 """
 
 """
-Extract condition and expected output from an implication constraint.
+Get the fresh constant name for a synthesis function.
 
-Takes a constraint like: (=> (and (< x0 x1) (< k x0)) (= (findIdx x0 x1 k) 0))
-Returns: (condition_expr, expected_output)
-  Where condition_expr = "(and (< x0 x1) (< k x0))"
-  And expected_output = "0"
+A fresh constant represents "what output the spec says is valid at this input point".
+
+Example: sfun.name = "max3" -> fresh_const_name = "out_max3"
 """
-function parse_implication_constraint(constraint::String)::Union{Tuple{String, String}, Nothing}
-    # Remove outer whitespace
-    constraint = strip(constraint)
-    
-    # Must start with (=>
-    !startswith(constraint, "(=>") && return nothing
-    
-    # Extract the parts: (=> condition consequent)
-    # We need to carefully parse S-expressions
-    
-    # Find the position after "=>" where condition starts
-    i = 4  # Skip "(=> "
-    while i < length(constraint) && isspace(constraint[i])
-        i += 1
-    end
-    cond_start = i
-    
-    # Find end of condition (when depth returns to 0)
-    depth = 0
-    cond_end = -1
-    while i <= length(constraint)
-        if constraint[i] == '('
-            depth += 1
-        elseif constraint[i] == ')'
-            depth -= 1
-            if depth == 0
-                cond_end = i
-                break
-            end
-        end
-        i += 1
-    end
-    
-    cond_end == -1 && return nothing
-    condition = strip(constraint[cond_start:cond_end])
-    
-    # Extract consequent: (= (findIdx ...) expected_value)
-    i = cond_end + 1
-    while i < length(constraint) && isspace(constraint[i])
-        i += 1
-    end
-    
-    # The consequent starts here and should be (= ...)
-    # Extract it until we find the matching close paren
-    conseq_start = i
-    depth = 0
-    conseq_end = -1
-    while i <= length(constraint)
-        if constraint[i] == '('
-            depth += 1
-        elseif constraint[i] == ')'
-            depth -= 1
-            if depth == 0
-                conseq_end = i
-                break
-            end
-        end
-        i += 1
-    end
-    
-    conseq_end == -1 && return nothing
-    
-    # Now extract just the value from (= (findIdx x0 x1 k) VALUE)
-    # Get everything between the last two closing parens
-    consequent_str = strip(constraint[conseq_start:conseq_end])
-    # consequent_str is like: (= (findIdx x0 x1 k) 0) or (= (fnd_sum x1 x2 x3) (+ x1 x2))
-    
-    # Find the value by parsing: after the function call, extract everything until the final paren
-    # Remove the outer (= ... ) wrapper
-    inner = strip(consequent_str[2:end-1])  # Remove (= ... )
-    
-    # Now inner is like: (fnd_sum x0 x1 k) 0  or  (fnd_sum x1 x2 x3) (+ x1 x2)
-    # We need to extract the second part (everything after the closing paren of the first s-expr)
-    
-    # Find where the function call ends (when depth returns to 0)
-    depth = 0
-    func_end = -1
-    for j in 1:length(inner)
-        if inner[j] == '('
-            depth += 1
-        elseif inner[j] == ')'
-            depth -= 1
-            if depth == 0
-                func_end = j
-                break
-            end
-        end
-    end
-    
-    func_end == -1 && return nothing
-    
-    # Everything after func_end is the expected value, strip whitespace
-    expected_value = strip(inner[func_end+1:end])
-    
-    return (condition, expected_value)
+function get_fresh_const_name(sfun::SynthFun)::String
+    "out_$(sfun.name)"
 end
 
 """
-Build a spec output function from constraints.
+Substitute all calls to a synthesis function with a fresh constant.
 
-Takes constraints like:
-  (=> (and (< x0 x1) (< k x0)) (= (findIdx x0 x1 k) 0))
-  (=> (and (< x0 x1) (>= k x0) (< k x1)) (= (findIdx x0 x1 k) 1))
-  (=> (and (< x0 x1) (>= k x1)) (= (findIdx x0 x1 k) 2))
+Replaces function calls like (max3 x y z) with the fresh constant name.
 
-Returns a nested ite expression that computes the expected output:
-  (ite cond1 out1 (ite cond2 out2 (ite cond3 out3 default)))
+Args:
+  constraint: String representation of a constraint (or any S-expression)
+  sfun_name: Name of the synthesis function (e.g., "max3")
+  fresh_const_name: Name of the fresh constant (e.g., "out_max3")
+
+Returns:
+  Modified constraint with all calls to sfun_name replaced by fresh_const_name
+
+Example:
+  constraint = "(>= (max3 x y z) x)"
+  substitute_synth_calls(constraint, "max3", "out_max3")
+  => "(>= out_max3 x)"
 """
-function build_spec_function_body(constraints::Vector{String}, default_value::String="0")::String
-    if isempty(constraints)
-        return default_value
-    end
+function substitute_synth_calls(
+    constraint::String,
+    sfun_name::String,
+    fresh_const_name::String,
+)::String
+    result = constraint
     
-    # Parse all constraints
-    parsed = []
-    for constraint in constraints
-        result = parse_implication_constraint(constraint)
-        if result !== nothing
-            push!(parsed, result)
+    # Replace (sfun_name ...) calls with fresh_const_name
+    i = 1
+    output = Char[]
+    
+    while i <= length(result)
+        # Look for (sfun_name pattern
+        if i < length(result) && result[i] == '(' && i + length(sfun_name) <= length(result)
+            # Check if this is (sfun_name
+            substring = result[i+1:min(i+length(sfun_name), length(result))]
+            
+            if substring == sfun_name
+                # Check if it's followed by space or close paren (ensuring it's a complete function name)
+                if i + length(sfun_name) + 1 <= length(result)
+                    next_char = result[i + length(sfun_name) + 1]
+                    if next_char == ' ' || next_char == ')'
+                        # This is a function call - find the matching close paren
+                        paren_depth = 1
+                        j = i + 2
+                        while j <= length(result) && paren_depth > 0
+                            if result[j] == '('
+                                paren_depth += 1
+                            elseif result[j] == ')'
+                                paren_depth -= 1
+                            end
+                            j += 1
+                        end
+                        
+                        # j is now one past the closing paren of the function call
+                        # Replace (sfun_name ...) with fresh_const_name
+                        append!(output, collect(fresh_const_name))
+                        i = j
+                        continue
+                    end
+                end
+            end
         end
+        
+        # No match, just append the character
+        push!(output, result[i])
+        i += 1
     end
     
-    if isempty(parsed)
-        return default_value
-    end
-    
-    # Build nested ite from the end backwards
-    result = default_value
-    for (i, (cond, expected_val)) in enumerate(reverse(parsed))
-        # result = (ite cond expected_val previous_result)
-        result = "(ite $cond $expected_val $result)"
-    end
-    
-    result
+    join(output)
 end
 
 """
-Generate a counterexample query verifying a candidate against a specification.
+Substitute free variables with function parameters in an expression.
 
-Returns SMT-LIB2 code that queries Z3 to find either:
-  - A counterexample (unsatisfiable: candidate doesn't satisfy spec)
-  - A valid model (satisfiable: candidate satisfies the constraint subset)
+Replaces free variable names with their corresponding parameter names.
 
-Now includes a spec_output function to determine what the correct output should be.
+Args:
+  expr: Expression string (e.g. candidate from synthesis)
+  param_names: Names of function parameters (e.g., ["x", "y", "z"])
+  free_var_names: Names of free variables (e.g., ["x1", "x2", "x3"])
+
+Returns:
+  Modified expression with free variables replaced by parameters
 """
 function substitute_params(
     expr::String, param_names::Vector{String},
@@ -178,11 +122,56 @@ function substitute_params(
 end
 
 """
+Detect if an SMT-LIB2 expression is likely a boolean (comparison or logical operator).
+
+Note: `ite` (ifelse) is NOT included because it returns Int when both branches are Int.
+Only operators that inherently return Bool are checked.
+"""
+function _looks_like_bool(expr::String)::Bool
+    expr = strip(expr)
+    # Check for boolean operators at the top level
+    # Note: "ite" is excluded - it returns Int if branches are Int
+    bool_ops = ["=", "<", ">", "<=", ">=", "and", "or", "not", "distinct"]
+    if startswith(expr, "(")
+        # Extract operator name
+        i = 2
+        while i <= length(expr) && expr[i] != ' ' && expr[i] != ')'
+            i += 1
+        end
+        op = expr[2:i-1]
+        return op ∈ bool_ops
+    end
+    false
+end
+
+"""
+Wrap a boolean expression in (ite expr 1 0) to convert to Int.
+"""
+function _wrap_bool_to_int(expr::String)::String
+    if _looks_like_bool(expr)
+        return "(ite $expr 1 0)"
+    end
+    expr
+end
+
+"""
 Generate a counterexample query verifying a candidate against a specification.
 
+Uses fresh constants to represent valid outputs according to the spec constraints.
+All constraints are applied to fresh constants, then the candidate is checked
+against these spec constraints. This approach works for all constraint types
+generically (implications, inequalities, I/O examples, mixed).
+
 Returns SMT-LIB2 code that queries Z3 to find either:
-  - A counterexample (unsatisfiable: candidate doesn't satisfy spec)
-  - A valid model (satisfiable: candidate satisfies the constraint subset)
+  - sat: A counterexample (candidate violates at least one spec constraint)
+  - unsat: Candidate satisfies all spec constraints at this input point
+
+Args:
+  spec: Parsed SyGuS specification
+  candidate_exprs: Dict mapping function names to SMT-LIB2 expressions
+
+Returns:
+  Complete SMT-LIB2 query string with (check-sat) and (get-value) commands
 """
 function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::String
     if !isa(spec, Spec)
@@ -191,9 +180,10 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     
     query_parts = String[]
     
+    # Set logic
     push!(query_parts, "(set-logic $(spec.logic))")
     
-    # Declare free variables using declare-const (not declare-fun)
+    # Declare free variables (inputs) using declare-const
     for fv in spec.free_vars
         decl = "(declare-const $(fv.name) $(fv.sort))"
         push!(query_parts, decl)
@@ -203,14 +193,18 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
         push!(query_parts, "")
     end
     
-    # Define synthesis functions with candidate expressions
-    # NOTE: Do NOT declare them first - only define them
+    # Define candidate synthesis functions with their expressions
     for sfun in spec.synth_funs
         candidate = get(candidate_exprs, sfun.name, nothing)
         if candidate !== nothing
             param_names = [pname for (pname, _) in sfun.params]
             free_var_names = [fv.name for fv in spec.free_vars]
             candidate_subst = substitute_params(candidate, param_names, free_var_names)
+            
+            # CHECK: If target sort is Int but candidate looks like Bool, wrap it
+            if sfun.sort == "Int" && _looks_like_bool(candidate_subst)
+                candidate_subst = _wrap_bool_to_int(candidate_subst)
+            end
             
             param_decls = join(["($(pname) $(sort))" for (pname, sort) in sfun.params], " ")
             defn = "(define-fun $(sfun.name) ($param_decls) $(sfun.sort) $candidate_subst)"
@@ -222,59 +216,75 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
         push!(query_parts, "")
     end
     
-    # Define spec output function(s) - what the spec says the output should be
-    # This is built from the constraints
+    # Declare fresh constants for each synthesis function
+    # These represent "what output the spec says is valid at this input point"
     for sfun in spec.synth_funs
-        param_decls = join(["($(pname) $(sort))" for (pname, sort) in sfun.params], " ")
-        spec_body = build_spec_function_body(spec.constraints)
-        defn = "(define-fun $(sfun.name)_spec ($param_decls) $(sfun.sort) $spec_body)"
-        push!(query_parts, defn)
+        fresh_name = get_fresh_const_name(sfun)
+        push!(query_parts, "(declare-const $fresh_name $(sfun.sort))")
     end
     
     if !isempty(spec.synth_funs)
         push!(query_parts, "")
     end
     
-    # Add constraints - NEGATED to find counterexamples
-    # unsat means candidate satisfies all constraints
-    # sat means the model is a concrete counterexample
+    # Assert spec constraints with fresh constants substituted
+    # This tells Z3: "for any valid output satisfying the spec, these constraints must hold"
+    for sfun in spec.synth_funs
+        fresh_name = get_fresh_const_name(sfun)
+        
+        # Only process constraints that mention this function
+        constraints_for_func = filter(c -> contains(c, "($(sfun.name)"), spec.constraints)
+        
+        if !isempty(constraints_for_func)
+            push!(query_parts, "; Spec constraints for $(sfun.name) (valid outputs: $fresh_name)")
+            for constraint in constraints_for_func
+                # Replace function calls with fresh constant
+                spec_constraint = substitute_synth_calls(constraint, sfun.name, fresh_name)
+                push!(query_parts, "(assert $spec_constraint)")
+            end
+            push!(query_parts, "")
+        end
+    end
+    
+    # Now assert that the candidate violates at least one constraint
+    # This is how we find counterexamples: unsat = candidate is correct, sat = we found a counterexample
     if !isempty(spec.constraints)
         constraint_list = join(spec.constraints, "\n  ")
+        push!(query_parts, "; Check if candidate violates any constraint")
         push!(query_parts, "(assert (not")
         push!(query_parts, "  (and")
         push!(query_parts, "    $constraint_list")
         push!(query_parts, "  )")
         push!(query_parts, "))")
     else
-        push!(query_parts, "(assert false)   ; no constraints")
+        push!(query_parts, "(assert false)   ; no constraints to verify")
     end
     
     push!(query_parts, "")
     push!(query_parts, "(check-sat)")
     
-    # Add value extraction commands
+    # Extract values to see the counterexample
     if !isempty(spec.free_vars)
         push!(query_parts, "")
-        push!(query_parts, "; free-variable assignments")
+        push!(query_parts, "; Free variable values at counterexample")
         var_list = join([fv.name for fv in spec.free_vars], " ")
         push!(query_parts, "(get-value ($var_list))")
     end
     
+    # Extract candidate and spec values for comparison
     if !isempty(spec.synth_funs)
         push!(query_parts, "")
-        push!(query_parts, "; candidate function value(s) at the counterexample point")
+        push!(query_parts, "; Candidate output(s)")
         for sfun in spec.synth_funs
-            # Build function call with free variables as arguments
             args = join([fv.name for fv in spec.free_vars], " ")
             push!(query_parts, "(get-value (($(sfun.name) $args)))")
         end
         
         push!(query_parts, "")
-        push!(query_parts, "; expected output from spec")
+        push!(query_parts, "; Valid spec output(s) - what the spec says is correct")
         for sfun in spec.synth_funs
-            # Build spec function call with free variables as arguments
-            args = join([fv.name for fv in spec.free_vars], " ")
-            push!(query_parts, "(get-value (($(sfun.name)_spec $args)))")
+            fresh_name = get_fresh_const_name(sfun)
+            push!(query_parts, "(get-value ($fresh_name))")
         end
     end
     

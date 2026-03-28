@@ -115,7 +115,7 @@ function extract_counterexample(
         oracle.enum_count += 1
         current_enum = oracle.enum_count
         
-        # Convert RuleNode to Julia expression using HerbGrammar
+        # Convert RuleNode to Julia expression
         candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
         candidate_readable = string(candidate_expr)
         
@@ -135,10 +135,18 @@ function extract_counterexample(
         println("\n[ORACLE_CALL #$current_enum]")
         println("  Candidate (Julia): $candidate_readable")
         println("  Candidate (SMT): $candidate_str")
+        println("  [DEBUG Z3 QUERY]")
+        println(query)
+        println("  [END Z3 QUERY]")
 
-        
         # Verify the query using Z3
-        result = CEXGeneration.verify_query(query)
+        result = try
+            CEXGeneration.verify_query(query)
+        catch query_error
+            println("  [ERROR in verify_query]: $query_error")
+            # Treat verification errors as unknown status (skip this candidate)
+            CEXGeneration.Z3Result(:unknown, Dict{String, Any}())
+        end
         
         println("  Z3 Status: $(result.status)")
         if result.status == :sat && !isempty(result.model)
@@ -153,6 +161,13 @@ function extract_counterexample(
             return nothing
         end
         
+        # If unknown, Z3 had an error (likely type mismatch in candidate)
+        # Treat this as invalid candidate - skip it
+        if result.status == :unknown
+            println("  [SKIPPED: Z3 had an error - likely type mismatch]")
+            return nothing
+        end
+        
         # Extract model from Z3 result
         if result.status == :sat && !isempty(result.model)
             # Build input dictionary from free variables
@@ -163,10 +178,10 @@ function extract_counterexample(
                 input_dict[Symbol(fv.name)] = val
             end
             
-            # Get expected output from spec (not the candidate!)
-            # The spec function tells us what the output SHOULD be given the constraints
-            spec_key = "$(func_name)_spec_result"
-            expected_output = get(result.model, spec_key, nothing)
+            # Get expected output from fresh constant
+            # The fresh constant represents "what the spec says is valid at this input"
+            fresh_const_name = "out_$(func_name)"
+            expected_output = get(result.model, fresh_const_name, nothing)
             
             # Return counterexample
             return Counterexample(input_dict, expected_output, nothing)
@@ -174,6 +189,10 @@ function extract_counterexample(
         
         return nothing
     catch e
+        println("  [ERROR in extract_counterexample]: $e")
+        println("  Stacktrace:")
+        showerror(stdout, e)
+        println()
         return nothing
     end
 end

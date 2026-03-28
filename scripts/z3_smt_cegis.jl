@@ -294,13 +294,13 @@ function run_z3_cegis(
     println()
     
     status_str = if result.status == CEGIS.cegis_success
-        "✓ SUCCESS"
+        "SUCCESS"
     elseif result.status == CEGIS.cegis_failure
-        "✗ FAILURE"
+        "FAILURE"
     elseif result.status == CEGIS.cegis_timeout
-        "⏱ TIMEOUT"
+        "TIMEOUT"
     else
-        "? UNKNOWN"
+        "UNKNOWN"
     end
     
     println("Status:              $status_str")
