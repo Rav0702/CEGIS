@@ -87,6 +87,7 @@ function run_synthesis(problem::CEGISProblem) :: CEGISResult
         max_time = problem.max_time,
         max_enumerations = problem.max_enumerations,
         iterator = iterator,
+        desired_solution = problem.desired_solution,
     )
     
     result = result_tuple.result
@@ -216,7 +217,8 @@ function synth_with_oracle(
     grammar::AbstractGrammar, start_symbol::Symbol, oracle::AbstractOracle;
     max_depth::Int=5, max_time::Float64=Inf, max_enumerations::Int=50_000,
     shortcircuit::Bool=true, allow_evaluation_errors::Bool=false, mod::Module=Main,
-    iterator::Union{Any, Nothing}=nothing 
+    iterator::Union{Any, Nothing}=nothing,
+    desired_solution::Union{String, Nothing}=nothing
 )
     start_time = time()
     problem = Problem(IOExample[])
@@ -264,6 +266,13 @@ function synth_with_oracle(
         
         expr_str = string(rulenode2expr(candidate_program, grammar))
         num_enum % 10000 == 0 && println("[enum=$num_enum] checking: $expr_str | spec size=$(length(problem.spec))")
+        
+        # Debug: Check if desired_solution is encountered
+        if desired_solution !== nothing && expr_str == desired_solution
+            desired_expr = rulenode2expr(candidate_program, grammar)
+            desired_satisfied = count_satisfied(candidate_program)
+            println("[enum=$num_enum] [DEBUG] DESIRED SOLUTION ENCOUNTERED: $expr_str | satisfies $(desired_satisfied)/$(length(problem.spec)) counterexamples")
+        end
         
         expr = rulenode2expr(candidate_program, grammar)
         score = isempty(problem.spec) ? 1.0 :

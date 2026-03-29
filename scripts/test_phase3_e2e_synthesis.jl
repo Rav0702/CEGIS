@@ -53,7 +53,8 @@ for (name, config) in BENCHMARKS
         problem = CEGIS.CEGISProblem(
             config.path;
             iterator_config = CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
-            desired_solution = config.expected
+            desired_solution = config.expected,
+            max_enumerations = name == "guard" ? 10_000_000 : 50_000
         )
         
         CEGIS.ensure_initialized!(problem)
