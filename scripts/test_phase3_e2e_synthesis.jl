@@ -46,7 +46,8 @@ for (name, config) in BENCHMARKS
         
         problem = CEGIS.CEGISProblem(
             config.path;
-            iterator_config = CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5)
+            iterator_config = CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
+            desired_solution = config.expected
         )
         
         CEGIS.ensure_initialized!(problem)

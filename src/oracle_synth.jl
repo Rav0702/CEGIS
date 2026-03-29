@@ -91,9 +91,59 @@ function run_synthesis(problem::CEGISProblem) :: CEGISResult
     
     result = result_tuple.result
     
-    # Step 4: Optional: Check desired solution
-    if problem.desired_solution !== nothing
-        # check_desired_solution(problem, result)  # Disabled for now - needs adaptation to SMT semantics
+    # Step 4: Optional: Generate debug query for desired solution if synthesis didn't succeed
+    if problem.desired_solution !== nothing && result.status != cegis_success
+        try
+            desired_expr = problem.desired_solution
+            candidate_smt = CEGIS.CEXGeneration.to_smt2(
+                CEGIS.CEXGeneration.get_default_candidate_parser(),
+                desired_expr
+            )
+            
+            if !isempty(problem.spec.synth_funs)
+                func_name = problem.spec.synth_funs[1].name
+                candidates_dict = Dict(func_name => candidate_smt)
+                query = CEGIS.CEXGeneration.generate_cex_query(problem.spec, candidates_dict)
+                
+                println("\n[DEBUG] Generated Z3 query for desired solution:")
+                println("="^70)
+                println(query)
+                println("="^70)
+                println()
+                
+                # Now actually run the query through Z3
+                println("[DEBUG] Running query through Z3...")
+                try
+                    # Split query into base (check-sat) and get-value parts
+                    lines = split(query, '\n')
+                    check_sat_idx = findfirst(l -> contains(l, "check-sat"), lines)
+                    
+                    if check_sat_idx !== nothing
+                        base_query = join(lines[1:check_sat_idx], '\n')
+                        get_value_lines = join(lines[check_sat_idx+1:end], '\n')
+                        
+                        # Call check_candidate to run through Z3
+                        status, model = CEGIS.CEXGeneration.check_candidate(base_query, get_value_lines)
+                        
+                        if status == :sat
+                            println("[DEBUG] Z3 Result: SAT (found counterexample)")
+                            if model !== nothing
+                                println("[DEBUG] Counterexample model:")
+                                println(model)
+                            end
+                        elseif status == :unsat
+                            println("[DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)")
+                        else
+                            println("[DEBUG] Z3 Result: $status")
+                        end
+                    end
+                catch e
+                    println("[DEBUG] Error running Z3: $e")
+                end
+            end
+        catch e
+            # Silently fail - not critical for synthesis
+        end
     end
     
     return result

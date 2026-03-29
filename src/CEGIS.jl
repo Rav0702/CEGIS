@@ -18,7 +18,6 @@ include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("synthesizer.jl")
 include("verifier.jl")
 include("counterexample.jl")
-include("learner.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 include("cegis_loop.jl")     # core loop — depends on all of the above
 
