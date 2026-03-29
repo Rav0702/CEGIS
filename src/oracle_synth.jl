@@ -115,28 +115,17 @@ function run_synthesis(problem::CEGISProblem) :: CEGISResult
                 # Now actually run the query through Z3
                 println("[DEBUG] Running query through Z3...")
                 try
-                    # Split query into base (check-sat) and get-value parts
-                    lines = split(query, '\n')
-                    check_sat_idx = findfirst(l -> contains(l, "check-sat"), lines)
+                    # Use the public API to verify the query
+                    z3_result = CEGIS.CEXGeneration.verify_query(query)
                     
-                    if check_sat_idx !== nothing
-                        base_query = join(lines[1:check_sat_idx], '\n')
-                        get_value_lines = join(lines[check_sat_idx+1:end], '\n')
-                        
-                        # Call check_candidate to run through Z3
-                        status, model = CEGIS.CEXGeneration.check_candidate(base_query, get_value_lines)
-                        
-                        if status == :sat
-                            println("[DEBUG] Z3 Result: SAT (found counterexample)")
-                            if model !== nothing
-                                println("[DEBUG] Counterexample model:")
-                                println(model)
-                            end
-                        elseif status == :unsat
-                            println("[DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)")
-                        else
-                            println("[DEBUG] Z3 Result: $status")
-                        end
+                    if z3_result.status == :sat
+                        println("[DEBUG] Z3 Result: SAT (found counterexample)")
+                        println("[DEBUG] Counterexample model:")
+                        println(z3_result.model)
+                    elseif z3_result.status == :unsat
+                        println("[DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)")
+                    else
+                        println("[DEBUG] Z3 Result: $(z3_result.status)")
                     end
                 catch e
                     println("[DEBUG] Error running Z3: $e")

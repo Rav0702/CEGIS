@@ -1,13 +1,12 @@
 """
 Z3 verification and counterexample extraction using Z3 Julia module.
 
-Provides functions to:
-- Verify SMT-LIB2 queries using native Z3 API
-- Extract counterexample models
-- Format results for display
-
-No manual parsing or intermediate files needed.
-Uses Z3's native SMT-LIB2 parser.
+Two-call approach:
+  Query 1: Base query (set-logic, set-option, declarations + assertions + check-sat)
+           → determine sat/unsat only, no model extraction
+  Query 2: Full query (base + get-value lines), only run when Query 1 is sat
+           → z3 binary handles get-value natively, returning all values including
+             model-completed unconstrained variables (e.g. `y` when candidate is `z`)
 """
 
 using Z3
@@ -23,151 +22,184 @@ struct Z3Result
 end
 
 """
-Check satisfiability using two-step approach: first check-sat, then get-value if sat.
-
-This avoids "model is not available" errors when get-value is called on unsat results.
+Run z3 binary on a query string, return stdout as a String.
+Writes to a temp file to avoid shell quoting issues on Windows.
 """
-function check_candidate(query_base::String, get_value_lines::String)
-    ctx = Z3.Context()
-    solver = Z3.Solver(ctx)
-    
-    # First: parse and check sat with just the base query (no get-value calls)
+function _z3_run(query::String)::String
+    tmp = tempname() * ".smt2"
     try
-        Z3.Libz3.Z3_solver_from_string(ctx.ctx, solver.solver, query_base)
-    catch e
-        return :unknown, nothing
-    end
-    
-    result = Z3.check(solver)
-    
-    if result.result == Z3.Libz3.Z3_L_TRUE  # sat (compare the field, not the struct)
-        # Get the model
-        m = Z3.model(solver)
-        model_str = unsafe_string(Z3.Libz3.Z3_model_to_string(Z3.ctx_ref(m), m.model))
-        
-        # Append the full model string to include base variables
-        # Since Z3 doesn't always include all variables in the model, we'll handle
-        # missing variables during parsing by providing defaults
-        return :sat, model_str
-    elseif result.result == Z3.Libz3.Z3_L_FALSE  # unsat
-        return :unsat, nothing
-    else  # unknown
-        return :unknown, nothing
+        write(tmp, query)
+        return readchomp(`z3 $tmp`)
+    finally
+        isfile(tmp) && rm(tmp)
     end
 end
 
 """
-Verify an SMT-LIB2 query string using Z3's native SMT-LIB2 parser.
+Parse the output of a z3 get-value call into a Dict.
+
+z3 prints one response block per (get-value ...) command:
+  ((x 1)
+   (y 0)
+   (z 0))
+  (((guard_fn x y z) 0))
+  ((out_guard_fn 1))
+
+Walks the output as nested s-expressions and collects every (key value) pair.
+Keys are normalised strings so callers can look up "x" and "(guard_fn x y z)".
+"""
+function _parse_get_value_output(output::String)::Dict{String,Any}
+    model = Dict{String,Any}()
+    text  = replace(output, r";[^\n]*" => "")
+
+    # Tokenise
+    tokens = String[]
+    i = 1; n = length(text)
+    while i <= n
+        c = text[i]
+        if isspace(c); i += 1
+        elseif c ∈ ('(', ')'); push!(tokens, string(c)); i += 1
+        else
+            j = i
+            while j <= n && !isspace(text[j]) && text[j] ∉ ('(', ')'); j += 1; end
+            push!(tokens, text[i:j-1]); i = j
+        end
+    end
+
+    pos = Ref(1)
+    while pos[] <= length(tokens)
+        _collect_kv_pairs!(model, tokens, pos)
+    end
+    model
+end
+
+function _read_sexp_str(toks::Vector{String}, pos::Ref{Int})::String
+    pos[] > length(toks) && return ""
+    t = toks[pos[]]; pos[] += 1
+    t != "(" && return t
+    parts = String[]
+    while pos[] <= length(toks) && toks[pos[]] != ")"
+        push!(parts, _read_sexp_str(toks, pos))
+    end
+    pos[] <= length(toks) && (pos[] += 1)
+    "(" * join(parts, " ") * ")"
+end
+
+function _collect_kv_pairs!(model::Dict{String,Any}, toks::Vector{String}, pos::Ref{Int})
+    pos[] > length(toks) && return
+    toks[pos[]] != "(" && (pos[] += 1; return)
+    pos[] += 1  # consume '('
+
+    children = String[]
+    while pos[] <= length(toks) && toks[pos[]] != ")"
+        push!(children, _read_sexp_str(toks, pos))
+    end
+    pos[] <= length(toks) && (pos[] += 1)  # consume ')'
+
+    if length(children) == 2
+        v = _parse_z3_numeral(children[2])
+        if v !== nothing
+            model[_norm_key(children[1])] = v
+            return
+        end
+    end
+
+    # Not a (key value) pair — recurse into child lists
+    for child in children
+        startswith(child, "(") || continue
+        child_toks = _retokenise_str(child)
+        child_pos  = Ref(1)
+        !isempty(child_toks) && child_toks[1] == "(" &&
+            _collect_kv_pairs!(model, child_toks, child_pos)
+    end
+end
+
+function _retokenise_str(s::String)::Vector{String}
+    toks = String[]
+    i = 1; n = length(s)
+    while i <= n
+        c = s[i]
+        if isspace(c); i += 1
+        elseif c ∈ ('(', ')'); push!(toks, string(c)); i += 1
+        else
+            j = i
+            while j <= n && !isspace(s[j]) && s[j] ∉ ('(', ')'); j += 1; end
+            push!(toks, s[i:j-1]); i = j
+        end
+    end
+    toks
+end
+
+function _parse_z3_numeral(s::String)::Union{Int,Nothing}
+    s = strip(s)
+    match(r"^-?\d+$", s) !== nothing && return parse(Int, s)
+    m = match(r"^\(\s*-\s+(\d+)\s*\)$", s)
+    m !== nothing && return -parse(Int, m[1])
+    s == "true"  && return 1
+    s == "false" && return 0
+    nothing
+end
+
+_norm_key(s::String) = join(split(strip(s)), " ")
+
+"""
+Verify an SMT-LIB2 query string using two z3 subprocess calls.
+
+Query 1: Run base query (declarations + assertions) with check-sat only
+         → determine satisfiability without model extraction overhead
+
+Query 2: If sat, run the complete query with (get-value ...) lines
+         → extract complete model with all variables forced to values via
+           z3's native get-value + model completion
 
 # Arguments
-- `query::String` — SMT-LIB2 query string (set-logic, declare-const/fun, assert, check-sat)
+- `query::String` — SMT-LIB2 query string (set-logic, declare-const/fun, assert, check-sat, get-value)
 
 # Returns
 - `Z3Result` — Contains satisfiability status and model (if sat)
-
-# Examples
-```
-query = \"\"\"
-(set-logic QF_LIA)
-(declare-const x Int)
-(declare-const y Int)
-(assert (> (+ x y) 10))
-(assert (< x 5))
-(check-sat)
-(get-value (x y))
-\"\"\"
-result = verify_query(query)
-```
 """
 function verify_query(query::String)::Z3Result
-    # Split query into base (without get-value) and get-value lines
+    # Split query into base (up to check-sat) and get-value lines
     lines = split(query, '\n')
     check_sat_idx = findfirst(line -> strip(line) == "(check-sat)", lines)
-    
-    query_base_lines = if check_sat_idx !== nothing
-        vcat(lines[1:check_sat_idx], "(check-sat)")
-    else
-        lines
-    end
-    
-    get_value_lines = if check_sat_idx !== nothing
-        lines[check_sat_idx+1:end]
-    else
-        String[]
-    end
-    
-    query_base = join(query_base_lines, "\n")
-    get_value_str = join(get_value_lines, "\n")
-    
-    # Use two-step approach
-    status, model_data = check_candidate(query_base, get_value_str)
-    
-    model = Dict{String, Any}()
-    if status == :sat && model_data !== nothing
-        _parse_model_line(model_data, model)
-    end
-    
-    Z3Result(status, model)
-end
 
-"""
-Parse a model line from Z3 output.
-Handles formats like: 
-- x0 -> 5, x1 -> -3 (from Z3_model_to_string)
-- ((x0 5) (x1 -3) (x2 0))  — plain integers (S-expression)
-- ((x0 (- 5)) (x1 (- 3)))  — S-expression negatives
-- (((fnd_sum x0 x1) 15))   — function call results
-- (((fnd_sum_spec x0 x1) 0)) — spec function results
-"""
-function _parse_model_line(line::String, model::Dict)::Nothing
-    # First try the modern format: name -> value (from Z3_model_to_string)
-    arrow_pattern = r"(\w+)\s*->\s*(-?\d+)"
-    for match in eachmatch(arrow_pattern, line)
-        name = match.captures[1]
-        val = parse(Int, match.captures[2])
-        model[name] = val
+    if check_sat_idx === nothing
+        return Z3Result(:unknown, Dict())
     end
-    
-    # Parse S-expression negative numbers: (- 5) → -5
-    sexp_neg_pattern = r"\((\w+)\s+\(\s*-\s+(\d+)\)\)"
-    for match in eachmatch(sexp_neg_pattern, line)
-        name = match.captures[1]
-        if !haskey(model, name)
-            val = -parse(Int, match.captures[2])
-            model[name] = val
-        end
+
+    query_base     = join(lines[1:check_sat_idx], "\n")
+    get_value_lines = lines[check_sat_idx+1:end]
+    query_full     = query_base * "\n" * join(get_value_lines, "\n")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Query 1: Just check-sat (no get-value overhead)
+    # ─────────────────────────────────────────────────────────────────────────
+    out1 = try
+        _z3_run(query_base)
+    catch e
+        return Z3Result(:unknown, Dict())
     end
-    
-    # Parse plain integers: (name value)
-    plain_int_pattern = r"\((\w+)\s+(-?\d+)\)"
-    for match in eachmatch(plain_int_pattern, line)
-        name = match.captures[1]
-        # Skip if already parsed as S-expr negative
-        if !haskey(model, name)
-            val = parse(Int, match.captures[2])
-            model[name] = val
-        end
+
+    first_line = strip(split(out1, '\n')[1])
+    first_line == "unsat" && return Z3Result(:unsat, Dict())
+    first_line != "sat"   && return Z3Result(:unknown, Dict())
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Query 2: Full query with get-value (only if Query 1 was sat)
+    # ─────────────────────────────────────────────────────────────────────────
+    isempty(strip(join(get_value_lines, "\n"))) && return Z3Result(:sat, Dict())
+
+    out2 = try
+        _z3_run(query_full)
+    catch e
+        return Z3Result(:sat, Dict())   # sat confirmed, model unavailable
     end
-    
-    # Function call pattern: ((func arg1 arg2) value) or ((func arg1 arg2) (- value))
-    func_plain_pattern = r"\(\((\w+)\s+[^)]*\)\s+(-?\d+)\)"
-    for match in eachmatch(func_plain_pattern, line)
-        func = match.captures[1]
-        val = parse(Int, match.captures[2])
-        model["$(func)_result"] = val
-    end
-    
-    # Function call with S-expr negative: ((func ...) (- value))
-    func_neg_pattern = r"\(\((\w+)\s+[^)]*\)\s+\(\s*-\s+(\d+)\)\)"
-    for match in eachmatch(func_neg_pattern, line)
-        func = match.captures[1]
-        if !haskey(model, "$(func)_result")
-            val = -parse(Int, match.captures[2])
-            model["$(func)_result"] = val
-        end
-    end
-    
-    nothing
+
+    lines2    = split(out2, '\n')
+    model_str = join(lines2[2:end], '\n')   # skip the leading "sat" line
+    model     = _parse_get_value_output(model_str)
+
+    return Z3Result(:sat, model)
 end
 
 """
@@ -177,7 +209,7 @@ Returns formatted string summarizing the verification result.
 """
 function format_result(result::Z3Result, spec::Spec)::String
     lines = String[]
-    
+
     if result.status == :sat
         push!(lines, "❌ COUNTEREXAMPLE FOUND")
         push!(lines, "")
@@ -189,8 +221,9 @@ function format_result(result::Z3Result, spec::Spec)::String
         push!(lines, "")
         push!(lines, "Function values at counterexample:")
         for sfun in spec.synth_funs
-            result_key = "$(sfun.name)_result"
-            val = get(result.model, result_key, "?")
+            args = join([fv.name for fv in spec.free_vars], " ")
+            key  = _norm_key("($(sfun.name) $args)")
+            val  = get(result.model, key, "?")
             push!(lines, "  $(sfun.name)(...) = $val")
         end
     elseif result.status == :unsat
@@ -203,6 +236,6 @@ function format_result(result::Z3Result, spec::Spec)::String
         push!(lines, "⚠️  ERROR")
         push!(lines, "Could not determine satisfiability.")
     end
-    
+
     join(lines, "\n")
 end
