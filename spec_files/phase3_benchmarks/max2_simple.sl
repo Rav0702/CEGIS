@@ -1,11 +1,11 @@
 (set-logic LIA)
 
-(synth-fun max2 ((x Int) (y Int)) Int)
+(synth-fun max2 ((x0 Int) (x1 Int)) Int)
 
-(declare-var x Int)
-(declare-var y Int)
-(constraint (>= (max2 x y) x))
-(constraint (>= (max2 x y) y))
-(constraint (or (= x (max2 x y)) (= y (max2 x y))))
+(declare-var x0 Int)
+(declare-var x1 Int)
+(constraint (>= (max2 x0 x1) x0))
+(constraint (>= (max2 x0 x1) x1))
+(constraint (or (= x0 (max2 x0 x1)) (= x1 (max2 x0 x1))))
 
 (check-synth)

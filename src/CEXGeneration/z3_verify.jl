@@ -23,6 +23,36 @@ struct Z3Result
 end
 
 """
+Check satisfiability using two-step approach: first check-sat, then get-value if sat.
+
+This avoids "model is not available" errors when get-value is called on unsat results.
+"""
+function check_candidate(query_base::String, get_value_lines::String)
+    ctx = Z3.Context()
+    solver = Z3.Solver(ctx)
+    
+    # First: parse and check sat with just the base query (no get-value calls)
+    try
+        Z3.Libz3.Z3_solver_from_string(ctx.ctx, solver.solver, query_base)
+    catch e
+        return :unknown, nothing
+    end
+    
+    result = Z3.check(solver)
+    
+    if result.result == Z3.Libz3.Z3_L_TRUE  # sat (compare the field, not the struct)
+        # Get the model
+        m = Z3.model(solver)
+        model_str = unsafe_string(Z3.Libz3.Z3_model_to_string(Z3.ctx_ref(m), m.model))
+        return :sat, model_str
+    elseif result.result == Z3.Libz3.Z3_L_FALSE  # unsat
+        return :unsat, nothing
+    else  # unknown
+        return :unknown, nothing
+    end
+end
+
+"""
 Verify an SMT-LIB2 query string using Z3's native SMT-LIB2 parser.
 
 # Arguments
@@ -46,77 +76,31 @@ result = verify_query(query)
 ```
 """
 function verify_query(query::String)::Z3Result
-    ctx = Z3.Context()
-    solver = Z3.Solver(ctx)
+    # Split query into base (without get-value) and get-value lines
+    lines = split(query, '\n')
+    check_sat_idx = findfirst(line -> strip(line) == "(check-sat)", lines)
     
-    # Use Z3's native SMT-LIB2 parser - this handles all parsing automatically
-    # Parse the query string into ASTs
-    # Note: Z3 may output errors to stderr/stdout directly, which is expected
-    result_str = ""
-    error_occurred = false
-    
-    try
-        result_str = unsafe_string(Z3.Libz3.Z3_eval_smtlib2_string(ctx.ctx, query))
-    catch e
-        # If Z3 throws an exception (e.g., parse error), treat as malformed query
-        # This can happen with type mismatches or syntax errors
-        # Return unknown to signal the candidate has a fundamental problem
-        error_occurred = true
-        result_str = ""
+    query_base_lines = if check_sat_idx !== nothing
+        vcat(lines[1:check_sat_idx], "(check-sat)")
+    else
+        lines
     end
     
-    if error_occurred || isempty(result_str)
-        # If Z3 threw an exception or returned empty, return unknown
-        return Z3Result(:unknown, Dict{String, Any}())
+    get_value_lines = if check_sat_idx !== nothing
+        lines[check_sat_idx+1:end]
+    else
+        String[]
     end
     
-    # Check for Z3 error patterns - this needs to handle both line-based and inline errors
-    if contains(result_str, "(error")
-        # Z3 reported an error - this means the candidate has a fundamental problem
-        # Return immediately with unknown status
-        return Z3Result(:unknown, Dict{String, Any}())
-    end
+    query_base = join(query_base_lines, "\n")
+    get_value_str = join(get_value_lines, "\n")
     
-    # Parse Z3 response
-    status = :unknown
+    # Use two-step approach
+    status, model_data = check_candidate(query_base, get_value_str)
+    
     model = Dict{String, Any}()
-    
-    # Split response into lines and parse
-    lines = split(result_str, '\n')
-    
-    # First pass: identify satisfiability status
-    for line in lines
-        line = strip(line)
-        if line == "sat"
-            status = :sat
-        elseif line == "unsat"
-            status = :unsat
-        elseif line == "unknown"
-            status = :unknown
-        end
-    end
-    
-    # If status is unsat, return immediately with empty model
-    # (errors that follow are expected - get-value commands fail on unsat)
-    if status == :unsat
-        return Z3Result(:unsat, Dict{String, Any}())
-    end
-    
-    # For sat status, try to extract model from non-error lines
-    if status == :sat
-        model_lines = String[]
-        for line in lines
-            line = strip(line)
-            if !isempty(line) && !startswith(line, "(error") && line ∉ ("sat", "unsat", "unknown")
-                push!(model_lines, line)
-            end
-        end
-        
-        # Parse model if we have data
-        if !isempty(model_lines)
-            model_str = join(model_lines, " ")
-            _parse_model_line(model_str, model)
-        end
+    if status == :sat && model_data !== nothing
+        _parse_model_line(model_data, model)
     end
     
     Z3Result(status, model)
@@ -125,18 +109,29 @@ end
 """
 Parse a model line from Z3 output.
 Handles formats like: 
-- ((x0 5) (x1 -3) (x2 0))  — plain integers
+- x0 -> 5, x1 -> -3 (from Z3_model_to_string)
+- ((x0 5) (x1 -3) (x2 0))  — plain integers (S-expression)
 - ((x0 (- 5)) (x1 (- 3)))  — S-expression negatives
 - (((fnd_sum x0 x1) 15))   — function call results
 - (((fnd_sum_spec x0 x1) 0)) — spec function results
 """
 function _parse_model_line(line::String, model::Dict)::Nothing
+    # First try the modern format: name -> value (from Z3_model_to_string)
+    arrow_pattern = r"(\w+)\s*->\s*(-?\d+)"
+    for match in eachmatch(arrow_pattern, line)
+        name = match.captures[1]
+        val = parse(Int, match.captures[2])
+        model[name] = val
+    end
+    
     # Parse S-expression negative numbers: (- 5) → -5
     sexp_neg_pattern = r"\((\w+)\s+\(\s*-\s+(\d+)\)\)"
     for match in eachmatch(sexp_neg_pattern, line)
         name = match.captures[1]
-        val = -parse(Int, match.captures[2])
-        model[name] = val
+        if !haskey(model, name)
+            val = -parse(Int, match.captures[2])
+            model[name] = val
+        end
     end
     
     # Parse plain integers: (name value)
@@ -162,8 +157,10 @@ function _parse_model_line(line::String, model::Dict)::Nothing
     func_neg_pattern = r"\(\((\w+)\s+[^)]*\)\s+\(\s*-\s+(\d+)\)\)"
     for match in eachmatch(func_neg_pattern, line)
         func = match.captures[1]
-        val = -parse(Int, match.captures[2])
-        model["$(func)_result"] = val
+        if !haskey(model, "$(func)_result")
+            val = -parse(Int, match.captures[2])
+            model["$(func)_result"] = val
+        end
     end
     
     nothing

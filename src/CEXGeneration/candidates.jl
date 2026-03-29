@@ -90,7 +90,58 @@ function tokenise_infix(src::String)::Vector{String}
             push!(tokens, src[i:j-1]); i = j
         end
     end
-    tokens
+    
+    # Post-process to handle implicit multiplication (e.g., 1y → 1 * y, 2x0 → 2 * x0)
+    # BUT: preserve variable names like x0, x1 (letter-start identifier with digits)
+    result = String[]
+    for token in tokens
+        if length(token) > 1
+            # Check if token starts with digit: if so, try to split off pure number prefix
+            # Example: "1y" → ["1", "*", "y"], "2x0" → ["2", "*", "x0"]
+            # But: "x0" stays as "x0" (letter-start, not split)
+            
+            first_char = token[1]
+            first_is_digit = isdigit(first_char)
+            
+            if first_is_digit
+                # Token starts with digit: find where all-digit prefix ends
+                j = 1
+                while j <= length(token) && isdigit(token[j])
+                    j += 1
+                end
+                
+                if j <= length(token)
+                    # We have non-digit part after the digit prefix
+                    # Check if next char is a letter (not another operator)
+                    next_char = token[j]
+                    is_next_letter = ('a' <= next_char <= 'z') || ('A' <= next_char <= 'Z') || next_char == '_'
+                    
+                    if is_next_letter
+                        # Split: "1y" → ["1", "*", "y"]
+                        num_part = token[1:j-1]
+                        rest = token[j:end]
+                        push!(result, num_part)
+                        push!(result, "*")
+                        push!(result, rest)
+                    else
+                        # Not a letter after digits, keep token as-is
+                        push!(result, token)
+                    end
+                else
+                    # All digits, keep as-is
+                    push!(result, token)
+                end
+            else
+                # Token starts with letter: this is a variable/identifier name
+                # Don't split even if it contains digits (e.g., x0, y1)
+                push!(result, token)
+            end
+        else
+            push!(result, token)
+        end
+    end
+    
+    result
 end
 
 mutable struct _InfixParserImpl
