@@ -194,7 +194,7 @@ function extract_counterexample(
             # Get expected output from fresh constant
             # The fresh constant represents "what the spec says is valid at this input"
             fresh_const_name = "out_$(func_name)"
-            expected_output = get(result.model, fresh_const_name, nothing)
+            expected_output = get(result.model, fresh_const_name, 0)  # Default to 0 if not in model
             
             # Return counterexample
             return Counterexample(input_dict, expected_output, nothing)

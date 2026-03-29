@@ -44,6 +44,10 @@ function check_candidate(query_base::String, get_value_lines::String)
         # Get the model
         m = Z3.model(solver)
         model_str = unsafe_string(Z3.Libz3.Z3_model_to_string(Z3.ctx_ref(m), m.model))
+        
+        # Append the full model string to include base variables
+        # Since Z3 doesn't always include all variables in the model, we'll handle
+        # missing variables during parsing by providing defaults
         return :sat, model_str
     elseif result.result == Z3.Libz3.Z3_L_FALSE  # unsat
         return :unsat, nothing

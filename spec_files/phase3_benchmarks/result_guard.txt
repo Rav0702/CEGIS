@@ -32,12 +32,14 @@ end
 (declare-const out_guard_fn Int)
 
 ; Spec constraints for guard_fn (valid outputs: out_guard_fn)
-(assert (or (= out_guard_fn (+ x y)) (= out_guard_fn z)))
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
 
 ; Check if candidate violates any constraint
 (assert (not
   (and
-    (or (= (guard_fn x y z) (+ x y)) (= (guard_fn x y z) z))
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
   )
 ))
 
@@ -54,17 +56,204 @@ end
 
   [END Z3 QUERY]
   Z3 Status: sat
-  Model keys: ["z"]
+  Model keys: ["out_guard_fn", "x", "z"]
+    out_guard_fn => 0
+    x => 0
     z => 0
-[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=nothing
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=0
 [iter=1] enum=1, Added IO counterexample, spec size now=1
-[enum=10000] checking: (z < x) - 0 | spec size=1
-[enum=20000] checking: (y < x) < (x >= z) | spec size=1
-[enum=30000] checking: (0 > x) < (x >= z) | spec size=1
-[enum=40000] checking: (z >= x) < (x >= z) | spec size=1
-[enum=50000] checking: (1 == x) < (x >= z) | spec size=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): z
+  Candidate (SMT): z
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int z)
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_guard_fn", "x", "z", "y"]
+    out_guard_fn => 1
+    x => 1
+    z => 2
+    y => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 2, :x => 1), expected=1
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int x)
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "z"]
+    x => 1
+    z => 0
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 1), expected=0
+[iter=3] enum=3, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): y < z
+  Candidate (SMT): (< y z)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int (ite (< y z) 1 0))
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_guard_fn", "x", "z"]
+    out_guard_fn => 0
+    x => 1
+    z => 1
+[enum=14] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 1, :x => 1), expected=0
+[iter=4] enum=14, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): x < z
+  Candidate (SMT): (< x z)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int (ite (< x z) 1 0))
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_guard_fn", "x", "z", "y"]
+    out_guard_fn => 1
+    x => 1
+    z => 0
+    y => 0
+[enum=34] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 1), expected=1
+[iter=5] enum=34, Added IO counterexample, spec size now=5
+[enum=10000] checking: (z < x) - 0 | spec size=5
+[enum=20000] checking: (y < x) < (x >= z) | spec size=5
+[enum=30000] checking: (0 > x) < (x >= z) | spec size=5
+[enum=40000] checking: (z >= x) < (x >= z) | spec size=5
+[enum=50000] checking: (1 == x) < (x >= z) | spec size=5
 [enum=50001] Reached max_enumerations limit (50000)
-[enum=50001] Best program found: y (satisfied 0 examples)
+[enum=50001] Best program found: x < z (satisfied 4 examples)
 
 [DEBUG] Generated Z3 query for desired solution:
 ======================================================================
@@ -79,12 +268,14 @@ end
 (declare-const out_guard_fn Int)
 
 ; Spec constraints for guard_fn (valid outputs: out_guard_fn)
-(assert (or (= out_guard_fn (+ x y)) (= out_guard_fn z)))
+(assert (=> (> x 0) (= out_guard_fn (+ x y))))
+(assert (=> (<= x 0) (= out_guard_fn z)))
 
 ; Check if candidate violates any constraint
 (assert (not
   (and
-    (or (= (guard_fn x y z) (+ x y)) (= (guard_fn x y z) z))
+    (=> (> x 0) (= (guard_fn x y z) (+ x y)))
+  (=> (<= x 0) (= (guard_fn x y z) z))
   )
 ))
 
@@ -103,12 +294,12 @@ end
 
 [DEBUG] Running query through Z3...
 [DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)
-      Found:    y
+      Found:    x < z
 
 
 ============================================================
 SUMMARY:
-  ✓ (name = "guard", status = "cegis_failure", iters = 1, found = true)
+  ✓ (name = "guard", status = "cegis_failure", iters = 5, found = true)
 
 Solutions found: 1 / 1
-PS C:\Users\rafal\.julia\dev\CEGIS> 
+PS C:\Users\rafal\.julia\dev\CEGIS> ^C
