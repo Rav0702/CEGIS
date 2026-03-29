@@ -1,0 +1,223 @@
+PS C:\Users\rafal\.julia\dev\CEGIS> julia scripts/test_phase3_e2e_synthesis.jl
+>>>> Testing max3
+      Expected: ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))
+[DEBUG] Generated grammar:
+@csgrammar begin
+    Expr = y | z | x | 0 | 1
+    Expr = BoolExpr
+    Expr = ifelse(BoolExpr, Expr, Expr)
+    Expr = (Expr + Expr)
+    Expr = (Expr - Expr)
+    Expr = (Expr * Expr)
+    BoolExpr = (Expr < Expr)
+    BoolExpr = (Expr > Expr)
+    BoolExpr = (Expr <= Expr)
+    BoolExpr = (Expr >= Expr)
+    BoolExpr = (Expr == Expr)
+end
+      [DEBUG] Oracle type: Main.CEGIS.Z3Oracle
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (>= out_max3 x))
+(assert (>= out_max3 y))
+(assert (>= out_max3 z))
+(assert (or (= x out_max3) (or (= y out_max3) (= z out_max3))))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "out_max3", "z"]
+    x => 0
+    out_max3 => 0
+    z => 0
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=0
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): z
+  Candidate (SMT): z
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int z)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (>= out_max3 x))
+(assert (>= out_max3 y))
+(assert (>= out_max3 z))
+(assert (or (= x out_max3) (or (= y out_max3) (= z out_max3))))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "out_max3", "y"]
+    x => 0
+    out_max3 => 0
+    y => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=0
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int x)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (>= out_max3 x))
+(assert (>= out_max3 y))
+(assert (>= out_max3 z))
+(assert (or (= x out_max3) (or (= y out_max3) (= z out_max3))))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max3", "z", "y"]
+    out_max3 => 0
+    z => 0
+    y => 0
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=0
+[iter=3] enum=3, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): 0
+  Candidate (SMT): 0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int 0)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (>= out_max3 x))
+(assert (>= out_max3 y))
+(assert (>= out_max3 z))
+(assert (or (= x out_max3) (or (= y out_max3) (= z out_max3))))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+[enum=4] SUCCESS: Found candidate satisfying all examples!
+[enum=4] Candidate: 0
+      Found:    0
+
+
+============================================================
+SUMMARY:
+  ✓ (name = "max3", status = "cegis_success", iters = 3, found = true)
+
+Solutions found: 1 / 1
+PS C:\Users\rafal\.julia\dev\CEGIS> 

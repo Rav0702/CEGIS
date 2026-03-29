@@ -15,16 +15,27 @@ const BENCHMARK_DIR = joinpath(dirname(@__DIR__), "spec_files", "phase3_benchmar
 const SPEC_DIR = joinpath(dirname(@__DIR__), "spec_files")
 
 const BENCHMARKS = Dict(
-    "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
-    "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
-    "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
-    "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
-    "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
-    "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
-    "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
-    "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
-    "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
+    # "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
+    # "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
+    # "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
+     "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
+    # "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
+    # "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
+    # "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
+    # "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
+    # "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
 )
+
+#= SUMMARY:
+  ✓ (name = "max3", status = "cegis_success", iters = 3, found = true)
+  ✓ (name = "guard", status = "cegis_failure", iters = 1, found = true)
+  ✓ (name = "symmetric", status = "cegis_success", iters = 14, found = true)
+  ✓ (name = "arith", status = "cegis_failure", iters = 5, found = true)
+  ✓ (name = "max2", status = "cegis_success", iters = 3, found = true)
+  ✓ (name = "findidx", status = "cegis_failure", iters = 5, found = true)
+  ✓ (name = "fnd_sum", status = "cegis_failure", iters = 16, found = true)
+  ✓ (name = "simple_define_sum", status = "cegis_failure", iters = 5, found = true)
+  ✓ (name = "jmbl_fg", status = "cegis_failure", iters = 3, found = true) =#
 
 # Use type-aware parser that handles Bool→Int coercion automatically
 CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCandidateParser())

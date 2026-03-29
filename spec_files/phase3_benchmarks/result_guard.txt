@@ -1,0 +1,114 @@
+PS C:\Users\rafal\.julia\dev\CEGIS> julia scripts/test_phase3_e2e_synthesis.jl
+>>>> Testing guard
+      Expected: ifelse(x > 0, x + y, z)
+[DEBUG] Generated grammar:
+@csgrammar begin
+    Expr = y | z | x | 0 | 1
+    Expr = BoolExpr
+    Expr = ifelse(BoolExpr, Expr, Expr)
+    Expr = (Expr + Expr)
+    Expr = (Expr - Expr)
+    Expr = (Expr * Expr)
+    BoolExpr = (Expr < Expr)
+    BoolExpr = (Expr > Expr)
+    BoolExpr = (Expr <= Expr)
+    BoolExpr = (Expr >= Expr)
+    BoolExpr = (Expr == Expr)
+end
+      [DEBUG] Oracle type: Main.CEGIS.Z3Oracle
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (or (= out_guard_fn (+ x y)) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (or (= (guard_fn x y z) (+ x y)) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["z"]
+    z => 0
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => 0, :x => 0), expected=nothing
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+[enum=10000] checking: (z < x) - 0 | spec size=1
+[enum=20000] checking: (y < x) < (x >= z) | spec size=1
+[enum=30000] checking: (0 > x) < (x >= z) | spec size=1
+[enum=40000] checking: (z >= x) < (x >= z) | spec size=1
+[enum=50000] checking: (1 == x) < (x >= z) | spec size=1
+[enum=50001] Reached max_enumerations limit (50000)
+[enum=50001] Best program found: y (satisfied 0 examples)
+
+[DEBUG] Generated Z3 query for desired solution:
+======================================================================
+(set-logic LIA)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun guard_fn ((x Int) (y Int) (z Int)) Int (ite (> x 0) (+ x y) z))
+
+(declare-const out_guard_fn Int)
+
+; Spec constraints for guard_fn (valid outputs: out_guard_fn)
+(assert (or (= out_guard_fn (+ x y)) (= out_guard_fn z)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (or (= (guard_fn x y z) (+ x y)) (= (guard_fn x y z) z))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((guard_fn x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_guard_fn))
+
+======================================================================
+
+[DEBUG] Running query through Z3...
+[DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)
+      Found:    y
+
+
+============================================================
+SUMMARY:
+  ✓ (name = "guard", status = "cegis_failure", iters = 1, found = true)
+
+Solutions found: 1 / 1
+PS C:\Users\rafal\.julia\dev\CEGIS> 

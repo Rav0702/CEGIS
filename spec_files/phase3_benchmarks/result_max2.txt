@@ -1,0 +1,209 @@
+PS C:\Users\rafal\.julia\dev\CEGIS> julia scripts/test_phase3_e2e_synthesis.jl
+>>>> Testing max2
+      Expected: ifelse(x > y, x, y)
+[DEBUG] Generated grammar:
+@csgrammar begin
+    Expr = x0 | x1 | 0 | 1
+    Expr = BoolExpr
+    Expr = ifelse(BoolExpr, Expr, Expr)
+    Expr = (Expr + Expr)
+    Expr = (Expr - Expr)
+    Expr = (Expr * Expr)
+    BoolExpr = (Expr < Expr)
+    BoolExpr = (Expr > Expr)
+    BoolExpr = (Expr <= Expr)
+    BoolExpr = (Expr >= Expr)
+    BoolExpr = (Expr == Expr)
+end
+      [DEBUG] Oracle type: Main.CEGIS.Z3Oracle
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x0
+  Candidate (SMT): x0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x0 Int)
+(declare-const x1 Int)
+
+(define-fun max2 ((x0 Int) (x1 Int)) Int x0)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (>= out_max2 x0))
+(assert (>= out_max2 x1))
+(assert (or (= x0 out_max2) (= x1 out_max2)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max2 x0 x1) x0)
+  (>= (max2 x0 x1) x1)
+  (or (= x0 (max2 x0 x1)) (= x1 (max2 x0 x1)))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x0 x1))
+
+; Candidate output(s)
+(get-value ((max2 x0 x1)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x1", "x0", "out_max2"]
+    x1 => 1
+    x0 => 0
+    out_max2 => 1
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:x0 => 0, :x1 => 1), expected=1
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): x1
+  Candidate (SMT): x1
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x0 Int)
+(declare-const x1 Int)
+
+(define-fun max2 ((x0 Int) (x1 Int)) Int x1)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (>= out_max2 x0))
+(assert (>= out_max2 x1))
+(assert (or (= x0 out_max2) (= x1 out_max2)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max2 x0 x1) x0)
+  (>= (max2 x0 x1) x1)
+  (or (= x0 (max2 x0 x1)) (= x1 (max2 x0 x1)))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x0 x1))
+
+; Candidate output(s)
+(get-value ((max2 x0 x1)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x0", "out_max2"]
+    x0 => 0
+    out_max2 => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:x0 => 0, :x1 => 0), expected=0
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): x0 + x1
+  Candidate (SMT): (+ x0 x1)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x0 Int)
+(declare-const x1 Int)
+
+(define-fun max2 ((x0 Int) (x1 Int)) Int (+ x0 x1))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (>= out_max2 x0))
+(assert (>= out_max2 x1))
+(assert (or (= x0 out_max2) (= x1 out_max2)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max2 x0 x1) x0)
+  (>= (max2 x0 x1) x1)
+  (or (= x0 (max2 x0 x1)) (= x1 (max2 x0 x1)))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x0 x1))
+
+; Candidate output(s)
+(get-value ((max2 x0 x1)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x1", "x0", "out_max2"]
+    x1 => 1
+    x0 => 2
+    out_max2 => 2
+[enum=6] Oracle counterexample: input=Dict{Symbol, Any}(:x0 => 2, :x1 => 1), expected=2
+[iter=3] enum=6, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(x0 < x1, x1, x0)
+  Candidate (SMT): (ite (< x0 x1) x1 x0)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+
+(declare-const x0 Int)
+(declare-const x1 Int)
+
+(define-fun max2 ((x0 Int) (x1 Int)) Int (ite (< x0 x1) x1 x0))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (>= out_max2 x0))
+(assert (>= out_max2 x1))
+(assert (or (= x0 out_max2) (= x1 out_max2)))
+
+; Check if candidate violates any constraint
+(assert (not
+  (and
+    (>= (max2 x0 x1) x0)
+  (>= (max2 x0 x1) x1)
+  (or (= x0 (max2 x0 x1)) (= x1 (max2 x0 x1)))
+  )
+))
+
+(check-sat)
+
+; Free variable values at counterexample
+(get-value (x0 x1))
+
+; Candidate output(s)
+(get-value ((max2 x0 x1)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+[enum=188] SUCCESS: Found candidate satisfying all examples!
+[enum=188] Candidate: ifelse(x0 < x1, x1, x0)
+      Found:    ifelse(x0 < x1, x1, x0)
+
+
+============================================================
+SUMMARY:
+  ✓ (name = "max2", status = "cegis_success", iters = 3, found = true)
+
+Solutions found: 1 / 1
