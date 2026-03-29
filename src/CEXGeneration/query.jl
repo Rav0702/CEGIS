@@ -187,6 +187,7 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     
     # Set logic
     push!(query_parts, "(set-logic $(spec.logic))")
+    push!(query_parts, "(set-option :model.completion true)")
     
     # Preamble: sorts, datatypes, helper functions (define-fun, define-funs-rec), uninterpreted functions
     # These must be included so that function definitions are available when constraints are evaluated
