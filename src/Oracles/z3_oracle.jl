@@ -170,12 +170,25 @@ function extract_counterexample(
         
         # Extract model from Z3 result
         if result.status == :sat && !isempty(result.model)
-            # Build input dictionary from free variables
-            # Z3 may not include all variables in the model, so provide defaults
+            # Build input dictionary: map free variables to synth-fun parameter names
+            # SyGuS free_vars (x1, x2, ...) are constraint variables
+            # Synth-fun parameters (y1, y2, ...) are what we synthesize over
+            # Z3 returns values for free_vars, but we need to map them to synth-fun parameters
             input_dict = Dict{Symbol, Any}()
-            for fv in oracle.spec.free_vars
+            
+            # Get synth-fun parameters
+            if isempty(oracle.spec.synth_funs)
+                return nothing
+            end
+            sfun = oracle.spec.synth_funs[1]
+            sfun_param_names = [pname for (pname, _) in sfun.params]
+            
+            # Map free variables to synth-fun parameters (in order)
+            for i in 1:min(length(sfun_param_names), length(oracle.spec.free_vars))
+                fv = oracle.spec.free_vars[i]
+                param_name = sfun_param_names[i]
                 val = get(result.model, fv.name, 0)  # Default to 0 if not in model
-                input_dict[Symbol(fv.name)] = val
+                input_dict[Symbol(param_name)] = val
             end
             
             # Get expected output from fresh constant

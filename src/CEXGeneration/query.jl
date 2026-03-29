@@ -95,14 +95,16 @@ end
 Substitute free variables with function parameters in an expression.
 
 Replaces free variable names with their corresponding parameter names.
+Only substitutes variables that have a corresponding parameter (by index).
 
 Args:
   expr: Expression string (e.g. candidate from synthesis)
   param_names: Names of function parameters (e.g., ["x", "y", "z"])
-  free_var_names: Names of free variables (e.g., ["x1", "x2", "x3"])
+  free_var_names: Names of free variables (e.g., ["x1", "x2", "x3", "v1", "v2"])
 
 Returns:
   Modified expression with free variables replaced by parameters
+  (only for variables that have corresponding parameters)
 """
 function substitute_params(
     expr::String, param_names::Vector{String},
@@ -110,8 +112,11 @@ function substitute_params(
 )::String
     result = expr
     
-    # Simple substitution: replace each free variable with its corresponding parameter
-    for (i, var_name) in enumerate(free_var_names)
+    # Only substitute for variables that have a corresponding parameter
+    # This handles the case where there are more free variables than parameters
+    # (e.g., jmbl_fg has 4 free vars but only 2 synth-fun parameters)
+    for i in 1:min(length(param_names), length(free_var_names))
+        var_name = free_var_names[i]
         param = param_names[i]
         # Use word boundaries to avoid partial matches
         # Replace var_name that appears as a complete identifier (surrounded by non-alphanumerics)

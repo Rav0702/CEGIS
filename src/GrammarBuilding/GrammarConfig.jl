@@ -289,10 +289,15 @@ function build_generic_grammar(spec::Any, config::GrammarConfig) :: AbstractGram
     free_vars = Dict{Symbol, Symbol}()  # name => type
     
     if config.free_vars_from_spec
-        for fv in spec.free_vars
-            # Map SyGuS sort to Julia type
-            jl_type = sygus_sort_to_julia_type(fv.sort)
-            free_vars[Symbol(fv.name)] = jl_type
+        # Extract synth-fun parameters as free variables (not all declare-var statements)
+        # In SyGuS, synth-fun parameters are the function's inputs for synthesis
+        # Other declare-var statements are constraint variables, not synthesis variables
+        if !isempty(spec.synth_funs)
+            sfun = spec.synth_funs[1]  # Assume single synth-fun for now
+            for (param_name, param_sort) in sfun.params
+                jl_type = sygus_sort_to_julia_type(param_sort)
+                free_vars[Symbol(param_name)] = jl_type
+            end
         end
     end
     
