@@ -147,6 +147,45 @@ const BITVECTOR_OPERATIONS = Dict(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
+"""
+    extract_numbers_from_spec(spec::Any) :: Vector{Int}
+
+Extract standalone integer constants from spec constraints.
+Filters to get only actual numeric literals (not digits in variable names like x0, x1).
+Filters out default values (0, 1) and returns unique sorted integers.
+"""
+function extract_numbers_from_spec(spec::Any)::Vector{Int}
+    numbers = Set{Int}()
+    
+    # Collect all constraints as a single string
+    constraint_text = if hasfield(typeof(spec), :constraints)
+        join(spec.constraints, " ")
+    else
+        ""
+    end
+    
+    # Match standalone numeric literals in SMT-LIB2:
+    # - Negative or positive integers
+    # - NOT preceded or followed by alphanumeric (to avoid x0, x1, etc.)
+    # Pattern: word boundary + optional minus + digits + word boundary
+    matches = findall(r"\b-?\d+\b", constraint_text)
+    
+    for match in matches
+        token = constraint_text[match]
+        try
+            num = parse(Int, token)
+            # Filter: keep all unique numbers except default 0 and 1
+            if num != 0 && num != 1
+                push!(numbers, num)
+            end
+        catch
+            # Not a number, skip
+        end
+    end
+    
+    return sort(collect(numbers))
+end
+
 # Grammar configuration type
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -265,13 +304,17 @@ function build_generic_grammar(spec::Any, config::GrammarConfig) :: AbstractGram
     # Step 2: Flatten operations from config
     operations = flatten_operations(config.base_operations)
     
+    # Step 2.5: Extract numeric constants from spec constraints (same as free_vars_from_spec)
+    extracted_numbers = extract_numbers_from_spec(spec)
+    
     # Step 3: Generate @csgrammar string
     grammar_str = generate_grammar_string(
         config.start_symbol,
         free_vars,
         operations,
         config.additional_rules,
-        config.include_constants
+        config.include_constants,
+        extracted_numbers
     )
     
     # Debug: print generated grammar
@@ -379,7 +422,8 @@ function generate_grammar_string(
     free_vars::Dict{Symbol,Symbol},
     operations::Vector,
     additional_rules::Vector{String},
-    include_constants::Bool
+    include_constants::Bool,
+    additional_int_constants::Vector{Int} = Int[]
 ) :: String
     
     lines = ["@csgrammar begin"]
@@ -396,8 +440,10 @@ function generate_grammar_string(
     
     # Add constants
     if include_constants
-        # Integer constants
-        for const_val in [0, 1, 2, -1]
+        # Integer constants: default (0, 1) + additional extracted from spec
+        default_constants = [0, 1]
+        all_constants = unique(vcat(default_constants, additional_int_constants))
+        for const_val in all_constants
             push!(first_rule_parts, string(const_val))
         end
     end

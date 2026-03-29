@@ -183,7 +183,20 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     # Set logic
     push!(query_parts, "(set-logic $(spec.logic))")
     
+    # Preamble: sorts, datatypes, helper functions (define-fun, define-funs-rec), uninterpreted functions
+    # These must be included so that function definitions are available when constraints are evaluated
+    if !isempty(spec.ordered_preamble)
+        push!(query_parts, "")
+        push!(query_parts, "; ── preamble (sorts, helpers, uninterpreted functions) ──")
+        for preamble_item in spec.ordered_preamble
+            push!(query_parts, preamble_item)
+        end
+    end
+    
     # Declare free variables (inputs) using declare-const
+    if !isempty(spec.free_vars)
+        push!(query_parts, "")
+    end
     for fv in spec.free_vars
         decl = "(declare-const $(fv.name) $(fv.sort))"
         push!(query_parts, decl)

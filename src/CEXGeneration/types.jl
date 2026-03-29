@@ -22,8 +22,14 @@ mutable struct Spec
     synth_funs  :: Vector{SynthFun}                    # Functions to synthesize
     free_vars   :: Vector{FreeVar}                     # Free variables (declare-var)
     constraints :: Vector{String}                      # Constraints as SMT-LIB2 strings
+    define_funs :: Vector{String}                      # Helper functions (define-fun statements)
+    define_funs_rec :: Vector{String}                  # Recursive functions (define-funs-rec statements)
+    fun_decls   :: Vector{String}                      # Uninterpreted functions (declare-fun with arity > 0)
+    sort_decls  :: Vector{String}                      # Sort declarations (declare-sort, define-sort)
+    datatypes   :: Vector{String}                      # Datatype declarations (declare-datatypes, declare-datatype)
+    ordered_preamble :: Vector{String}                 # All preamble items in source order (for Z3 query generation)
 end
 
 """Create a default empty Spec."""
-Spec() = Spec("", "", SynthFun[], FreeVar[], String[])
+Spec() = Spec("", "", SynthFun[], FreeVar[], String[], String[], String[], String[], String[], String[], String[])
 

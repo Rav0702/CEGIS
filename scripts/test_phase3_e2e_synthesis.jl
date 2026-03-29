@@ -1,6 +1,7 @@
 #!/usr/bin/env julia
 """
-test_phase3_e2e_synthesis_simple.jl - Minimal end-to-end CEGIS synthesis test
+test_phase3_e2e_synthesis.jl - End-to-end CEGIS synthesis test
+Numbers and variables are extracted automatically from specs
 """
 
 CEGIS_ROOT = dirname(@__DIR__)
@@ -11,28 +12,18 @@ using HerbCore, HerbGrammar, HerbSearch, HerbSpecification, HerbInterpret
 include(joinpath(CEGIS_SRC, "CEGIS.jl"))
 
 const BENCHMARK_DIR = joinpath(dirname(@__DIR__), "spec_files", "phase3_benchmarks")
+const SPEC_DIR = joinpath(dirname(@__DIR__), "spec_files")
 
 const BENCHMARKS = Dict(
-    "max2" => (
-        path = joinpath(BENCHMARK_DIR, "max2_simple.sl"),
-        expected = "ifelse(x > y, x, y)"
-    ),
-    "max3" => (
-        path = joinpath(BENCHMARK_DIR, "max3_simple.sl"),
-        expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"
-    ),
-    "symmetric" => (
-        path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"),
-        expected = "ifelse(x > y, x, y)"
-    ),
-    "guard" => (
-        path = joinpath(BENCHMARK_DIR, "guard_simple.sl"),
-        expected = "ifelse(x > 0, x + y, z)"
-    ),
-    "arith" => (
-        path = joinpath(BENCHMARK_DIR, "arith_simple.sl"),
-        expected = "2 * x + y"
-    ),
+    "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
+    "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
+    "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
+    "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
+    "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
+    "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
+    "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
+    "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
+    "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
 )
 
 # Use type-aware parser that handles Bool→Int coercion automatically
@@ -42,7 +33,11 @@ results = []
 for (name, config) in BENCHMARKS
     try
         println(">>>> Testing $name")
-        println("      Expected: $(config.expected)")
+        if config.expected !== nothing
+            println("      Expected: $(config.expected)")
+        else
+            println("      Expected: TBD (will check with Z3)")
+        end
         
         problem = CEGIS.CEGISProblem(
             config.path;

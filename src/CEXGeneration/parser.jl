@@ -16,7 +16,7 @@ function parse_sl(filename::String)::Spec
     end
 
     exprs = read_sexprs(content)
-    spec = Spec(filename, "", SynthFun[], FreeVar[], String[])
+    spec = Spec(filename, "", SynthFun[], FreeVar[], String[], String[], String[], String[], String[], String[], String[])
 
     i = 1
     while i <= length(exprs)
@@ -35,6 +35,46 @@ function parse_sl(filename::String)::Spec
 
         if head == "set-logic"
             spec.logic = String(expr[2])
+
+        elseif head == "declare-sort" || head == "define-sort"
+            # Sort declarations
+            raw = sexp_to_str(expr)
+            push!(spec.sort_decls, raw)
+            push!(spec.ordered_preamble, raw)
+
+        elseif head == "declare-datatypes" || head == "declare-datatype"
+            # Datatype declarations
+            raw = sexp_to_str(expr)
+            push!(spec.datatypes, raw)
+            push!(spec.ordered_preamble, raw)
+
+        elseif head == "define-fun"
+            # Helper function definitions
+            raw = sexp_to_str(expr)
+            push!(spec.define_funs, raw)
+            push!(spec.ordered_preamble, raw)
+
+        elseif head == "define-funs-rec"
+            # Recursive function definitions
+            raw = sexp_to_str(expr)
+            push!(spec.define_funs_rec, raw)
+            push!(spec.ordered_preamble, raw)
+
+        elseif head == "declare-fun"
+            # Uninterpreted function declarations (arity > 0) or constants (arity = 0)
+            # For us, only track functions with arity > 0 here; arity = 0 are treated as free vars
+            params_raw = expr[3]
+            if isa(params_raw, Vector) && !isempty(params_raw)
+                # This is a function declaration (arity > 0)
+                raw = sexp_to_str(expr)
+                push!(spec.fun_decls, raw)
+                push!(spec.ordered_preamble, raw)
+            else
+                # This is a constant declaration (arity = 0), treat as free variable
+                name = String(expr[2])
+                sort = String(expr[4])
+                push!(spec.free_vars, FreeVar(name, sort))
+            end
 
         elseif head == "declare-var"
             name = String(expr[2])
