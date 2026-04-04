@@ -1,4 +1,11 @@
 """
+
+DEPRECATED: This file is no longer used in the current CEGIS implementation.
+It was an early attempt at a semantic SMT-based oracle, but we have since moved to a different design.
+The code is left here for reference and potential future use, but it may not be fully functional or
+up-to-date with the rest of the system.
+
+
     semantic_smt_oracle.jl
 
 Semantic SMT-based oracle for CEGIS synthesis using formal verification.

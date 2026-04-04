@@ -9,8 +9,8 @@ Abstract Interface:
   - to_smt2(parser, src): Convert candidate to SMT-LIB2 using specified parser
 
 Built-in Implementations:
-  1. InfixCandidateParser (default, strictly-typed SMT-LIB2)
-  2. SymbolicCandidateParser (experimental, handles mixed bool-numeric)
+  1. InfixCandidateParser (default, strictly-typed SMT-LIB2, not suitable for mixed bool-int)
+  2. SymbolicCandidateParser (handles mixed bool-numeric)
 
 Surface syntax (both):
   Literals     : 0, -3, true, false
@@ -90,9 +90,11 @@ function tokenise_infix(src::String)::Vector{String}
             push!(tokens, src[i:j-1]); i = j
         end
     end
-    
+
+    # HACK:
     # Post-process to handle implicit multiplication (e.g., 1y → 1 * y, 2x0 → 2 * x0)
     # BUT: preserve variable names like x0, x1 (letter-start identifier with digits)
+    # I don't like that we are doing this here, there must be a better way, so we are trying the SymbolicCandidateParser that doesn't require this hack.
     result = String[]
     for token in tokens
         if length(token) > 1
@@ -240,7 +242,7 @@ function to_smt2(parser::InfixCandidateParser, src::String)::String
 end
 
 # ═════════════════════════════════════════════════════════════════════════════
-# SymbolicCandidateParser: Experimental (handles mixed bool-numeric)
+# SymbolicCandidateParser: (handles mixed bool-numeric) and more flexible syntax connected to julia
 # ═════════════════════════════════════════════════════════════════════════════
 
 """
@@ -256,7 +258,6 @@ Implementation: Type-aware recursive descent parser that:
 1. Parses infix expressions into typed AST
 2. Tracks Bool vs Int sorts during parsing
 3. Automatically wraps (condition) → (ite condition 1 0) when Bool appears in Int context
-4. Generates SMT-LIB2 with proper type handling
 """
 struct SymbolicCandidateParser <: AbstractCandidateParser
     name::String
@@ -451,7 +452,7 @@ function to_smt2(parser::SymbolicCandidateParser, src::String)::String
 end
 
 # ═════════════════════════════════════════════════════════════════════════════
-# BACKWARDS COMPATIBILITY: Default dispatcher
+#  Default dispatcher
 # ═════════════════════════════════════════════════════════════════════════════
 
 const _global_default_parser = Ref{AbstractCandidateParser}(InfixCandidateParser())
@@ -489,7 +490,7 @@ candidate_to_smt2("x + 5")
 
 # Switch to symbolic parser
 set_default_candidate_parser(SymbolicCandidateParser())
-candidate_to_smt2("(x > y) * x")  # Now works!
+candidate_to_smt2("(x > y) * x")
 
 # Or use explicit parser
 parser = InfixCandidateParser()

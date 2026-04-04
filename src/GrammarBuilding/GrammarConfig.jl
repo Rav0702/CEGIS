@@ -47,9 +47,6 @@ Default base operations for integer arithmetic synthesis.
 - Bitwise: &, |, ~ (for bitvector synthesis)
 
 Can be extended by user-defined operation sets.
-
-**WARNING**: This includes logical operators which invalidate integer-only synthesis.
-Use `LIA_OPERATIONS` for Linear Integer Arithmetic problems instead.
 """
 const BASE_OPERATIONS = Dict(
     :constants      => [0, 1, 2, -1],
@@ -204,7 +201,6 @@ to include, how to represent variables, and rules for composition.
 - `include_constants::Bool` — Include literal constants (default: true)
 
 **Design**:
-- Immutable after creation (no rebuilding logic)
 - Purely declarative (describes what grammar to build)
 - Composable (can combine multiple operation sets)
 
@@ -278,7 +274,7 @@ grammar = build_generic_grammar(spec, config)
 ```
 
 **Implementation Note**:
-This is the most complex part of the refactor. It must:
+It must:
 - Map spec variable types (Int → :Int, Bool → :Bool, etc.)
 - Handle variable naming conflicts
 - Generate syntactically correct Julia code for @csgrammar

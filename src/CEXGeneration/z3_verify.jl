@@ -7,6 +7,8 @@ Two-call approach:
   Query 2: Full query (base + get-value lines), only run when Query 1 is sat
            → z3 binary handles get-value natively, returning all values including
              model-completed unconstrained variables (e.g. `y` when candidate is `z`)
+  NOTE: We need to investigate how to make this better, cache the model etc. For now this works but maybe
+  there are some better ways.
 """
 
 using Z3
@@ -172,7 +174,7 @@ function verify_query(query::String)::Z3Result
     query_full     = query_base * "\n" * join(get_value_lines, "\n")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Query 1: Just check-sat (no get-value overhead)
+    # Query 1: Just check-sat (no get-value because if unsat it breaks the model extraction)
     # ─────────────────────────────────────────────────────────────────────────
     out1 = try
         _z3_run(query_base)
@@ -211,7 +213,7 @@ function format_result(result::Z3Result, spec::Spec)::String
     lines = String[]
 
     if result.status == :sat
-        push!(lines, "❌ COUNTEREXAMPLE FOUND")
+        push!(lines, " COUNTEREXAMPLE FOUND")
         push!(lines, "")
         push!(lines, "Free variable assignments:")
         for fv in spec.free_vars
@@ -227,13 +229,13 @@ function format_result(result::Z3Result, spec::Spec)::String
             push!(lines, "  $(sfun.name)(...) = $val")
         end
     elseif result.status == :unsat
-        push!(lines, "✅ VALID CANDIDATE")
+        push!(lines, "VALID CANDIDATE")
         push!(lines, "The candidate satisfies all constraints.")
     elseif result.status == :unknown
-        push!(lines, "⚠️  UNKNOWN")
+        push!(lines, " UNKNOWN")
         push!(lines, "Z3 could not determine satisfiability.")
     else
-        push!(lines, "⚠️  ERROR")
+        push!(lines, "  ERROR")
         push!(lines, "Could not determine satisfiability.")
     end
 

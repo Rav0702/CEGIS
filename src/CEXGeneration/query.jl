@@ -13,8 +13,6 @@ Handles:
 """
 Get the fresh constant name for a synthesis function.
 
-A fresh constant represents "what output the spec says is valid at this input point".
-
 Example: sfun.name = "max3" -> fresh_const_name = "out_max3"
 """
 function get_fresh_const_name(sfun::SynthFun)::String
@@ -98,7 +96,7 @@ Replaces free variable names with their corresponding parameter names.
 Only substitutes variables that have a corresponding parameter (by index).
 
 Args:
-  expr: Expression string (e.g. candidate from synthesis)
+  expr: Expression string (candidate from synthesis)
   param_names: Names of function parameters (e.g., ["x", "y", "z"])
   free_var_names: Names of free variables (e.g., ["x1", "x2", "x3", "v1", "v2"])
 
@@ -247,7 +245,6 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     end
     
     # Assert spec constraints with fresh constants substituted
-    # This tells Z3: "for any valid output satisfying the spec, these constraints must hold"
     for sfun in spec.synth_funs
         fresh_name = get_fresh_const_name(sfun)
         
@@ -266,7 +263,7 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     end
     
     # Now assert that the candidate violates at least one constraint
-    # This is how we find counterexamples: unsat = candidate is correct, sat = we found a counterexample
+    # counterexamples: unsat = candidate is correct, sat = we found a counterexample
     if !isempty(spec.constraints)
         constraint_list = join(spec.constraints, "\n  ")
         push!(query_parts, "; Check if candidate violates any constraint")

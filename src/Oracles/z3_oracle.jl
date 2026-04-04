@@ -211,6 +211,8 @@ function extract_counterexample(
 end
 
 """
+TBH I think it is not needed now as we convert it elsewhere, but lets keep it
+
     _expr_to_z3(val::Any, ctx::Z3.Context, vars::Dict{String,Z3.Expr})::Z3.Expr
 
 Convert a Julia value or expression to a Z3 expression using the Z3 API.

@@ -1,5 +1,5 @@
 """
-CEXGeneration: Production-ready counterexample query generation for SyGuS specifications.
+CEXGeneration: Counterexample query generation for SyGuS specifications.
 
 Converts SyGuS-v2 specifications and candidate solutions to SMT-LIB2 queries for verification.
 
