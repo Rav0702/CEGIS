@@ -13,7 +13,7 @@ Requires: CEGIS module and Herb packages to be loaded first.
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NEW: Generic CEGISProblem orchestrator (Phase 2)
+# Generic CEGISProblem orchestrator
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
@@ -123,7 +123,7 @@ function run_synthesis(problem::CEGISProblem) :: CEGISResult
                         println("[DEBUG] Counterexample model:")
                         println(z3_result.model)
                     elseif z3_result.status == :unsat
-                        println("[DEBUG] Z3 Result: UNSAT ✅ (desired solution is VALID!)")
+                        println("[DEBUG] Z3 Result: UNSAT  (desired solution is VALID!)")
                     else
                         println("[DEBUG] Z3 Result: $(z3_result.status)")
                     end
@@ -164,9 +164,9 @@ function check_desired_solution(problem::CEGISProblem, result::CEGISResult)
             cx = extract_counterexample(problem.oracle, problem, nothing)
             
             if cx === nothing
-                println("  Status: ✅ DESIRED SOLUTION VERIFIED")
+                println("  Status: DESIRED SOLUTION VERIFIED")
             else
-                println("  Status: ❌ DESIRED SOLUTION INVALID")
+                println("  Status: DESIRED SOLUTION INVALID")
                 println("  Counterexample found:")
                 println("    Input: $(cx.input)")
                 println("    Expected: $(cx.expected_output)")
@@ -174,11 +174,11 @@ function check_desired_solution(problem::CEGISProblem, result::CEGISResult)
             end
         else
             # Fallback: Just report that it parsed successfully
-            println("  Status: ✅ PARSED SUCCESSFULLY")
+            println("  Status: PARSED SUCCESSFULLY")
             println("  Note: Full verification requires oracle setup")
         end
     catch e
-        println("  Status: ❌ PARSE ERROR")
+        println("  Status: PARSE ERROR")
         println("  Error: $(e)")
     end
     
