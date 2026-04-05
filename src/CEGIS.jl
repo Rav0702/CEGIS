@@ -15,8 +15,8 @@ include("Parsers/Parsers.jl") # Spec parsers (extensible)
 include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
 include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses AbstractOracle)
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
-include("synthesizer.jl")
-include("verifier.jl")
+# include("synthesizer.jl")  # [MISSING FILE - commented out]
+# include("verifier.jl")     # [MISSING FILE - commented out]
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 include("cegis_loop.jl")     # core loop — depends on all of the above
@@ -53,33 +53,15 @@ export
     # Main entry point
     run_cegis,
     run_ioexample_cegis,
-
-    # Synthesizer
-    synthesize,
-    build_iterator,
-    update_problem_with_counterexample!,
-
-    # Verifier
-    verify,
-    extract_counterexample,
-    oracle_from_examples,
-    oracle_from_smt,
-
-    # Oracle-driven synthesis
-    synth_with_oracle,
     run_synthesis,
+    synth_with_oracle,
     check_desired_solution,
 
     # Counterexample management
+    extract_counterexample,
     counterexample_to_ioexample,
     minimize_counterexample,
     generalize_counterexample,
-    is_duplicate_counterexample,
-
-    # Learner
-    learn_constraint,
-    add_constraint_to_grammar!,
-    reset_learned_constraints!,
-    constraints_from_counterexamples
+    is_duplicate_counterexample
 
 end # module CEGIS
