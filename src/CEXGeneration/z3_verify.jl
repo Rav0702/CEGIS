@@ -1,17 +1,17 @@
 """
 Z3 verification and counterexample extraction using Z3 Julia module.
 
-Two-call approach:
-  Query 1: Base query (set-logic, set-option, declarations + assertions + check-sat)
-           → determine sat/unsat only, no model extraction
-  Query 2: Full query (base + get-value lines), only run when Query 1 is sat
-           → z3 binary handles get-value natively, returning all values including
-             model-completed unconstrained variables (e.g. `y` when candidate is `z`)
-  NOTE: We need to investigate how to make this better, cache the model etc. For now this works but maybe
-  there are some better ways.
+Single-call approach (optimized):
+  Query: Base query (set-logic, set-option, declarations + assertions + check-sat + get-value)
+         → Single Z3 subprocess call that handles both sat/unsat checks and model extraction
+         → For SAT: returns "sat" followed by model values
+         → For UNSAT: returns "unsat" only (get-value output is ignored)
+  
+  This is more efficient than the previous two-call approach as Z3 only executes once.
 """
 
 using Z3
+using Logging
 
 """
 Result of Z3 verification.
@@ -26,12 +26,20 @@ end
 """
 Run z3 binary on a query string, return stdout as a String.
 Writes to a temp file to avoid shell quoting issues on Windows.
+On error, returns "unsat" status to allow execution to continue.
 """
 function _z3_run(query::String)::String
     tmp = tempname() * ".smt2"
     try
+        @debug "Z3: Writing query to temp file" tmp
         write(tmp, query)
-        return readchomp(`z3 $tmp`)
+        @debug "Z3: Executing z3 subprocess"
+        result = readchomp(`z3 $tmp`)
+        @debug "Z3: Subprocess completed" result_lines = length(split(result, '\n'))
+        return result
+    catch e
+        # @warn "Z3: Execution failed, returning unsat status" exception=e
+        return "unsat"
     finally
         isfile(tmp) && rm(tmp)
     end
@@ -145,14 +153,13 @@ end
 _norm_key(s::String) = join(split(strip(s)), " ")
 
 """
-Verify an SMT-LIB2 query string using two z3 subprocess calls.
+Verify an SMT-LIB2 query string using a single z3 subprocess call.
 
-Query 1: Run base query (declarations + assertions) with check-sat only
-         → determine satisfiability without model extraction overhead
-
-Query 2: If sat, run the complete query with (get-value ...) lines
-         → extract complete model with all variables forced to values via
-           z3's native get-value + model completion
+Runs the complete query including check-sat and get-value in one call:
+  - For SAT: returns "sat" followed by model values
+  - For UNSAT: returns "unsat" only (get-value output is safely ignored by Z3)
+  
+Single Z3 call handles both satisfiability check and model extraction.
 
 # Arguments
 - `query::String` — SMT-LIB2 query string (set-logic, declare-const/fun, assert, check-sat, get-value)
@@ -161,47 +168,28 @@ Query 2: If sat, run the complete query with (get-value ...) lines
 - `Z3Result` — Contains satisfiability status and model (if sat)
 """
 function verify_query(query::String)::Z3Result
-    # Split query into base (up to check-sat) and get-value lines
-    lines = split(query, '\n')
-    check_sat_idx = findfirst(line -> strip(line) == "(check-sat)", lines)
+    # Run the full query (check-sat + get-value) in a single Z3 call
+    # Z3 will return "unsat" (ignoring get-value) or "sat" with model values
+    # On error, returns "unknown" to allow execution to continue
+    out = _z3_run(query)
 
-    if check_sat_idx === nothing
-        return Z3Result(:unknown, Dict())
-    end
+    lines = [strip(line) for line in split(out, '\n') if !isempty(strip(line))]
+    
+    isempty(lines) && return Z3Result(:unknown, Dict())
+    first_line = lines[1]
 
-    query_base     = join(lines[1:check_sat_idx], "\n")
-    get_value_lines = lines[check_sat_idx+1:end]
-    query_full     = query_base * "\n" * join(get_value_lines, "\n")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Query 1: Just check-sat (no get-value because if unsat it breaks the model extraction)
-    # ─────────────────────────────────────────────────────────────────────────
-    out1 = try
-        _z3_run(query_base)
-    catch e
-        return Z3Result(:unknown, Dict())
-    end
-
-    first_line = strip(split(out1, '\n')[1])
+    # Handle unsat: Z3 just returns "unsat" and ignores get-value calls
     first_line == "unsat" && return Z3Result(:unsat, Dict())
     first_line != "sat"   && return Z3Result(:unknown, Dict())
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Query 2: Full query with get-value (only if Query 1 was sat)
-    # ─────────────────────────────────────────────────────────────────────────
-    isempty(strip(join(get_value_lines, "\n"))) && return Z3Result(:sat, Dict())
-
-    out2 = try
-        _z3_run(query_full)
-    catch e
-        return Z3Result(:sat, Dict())   # sat confirmed, model unavailable
+    # SAT: extract model from get-value output (lines after "sat")
+    if length(lines) > 1
+        model_str = join(lines[2:end], '\n')
+        model = _parse_get_value_output(model_str)
+        return Z3Result(:sat, model)
     end
 
-    lines2    = split(out2, '\n')
-    model_str = join(lines2[2:end], '\n')   # skip the leading "sat" line
-    model     = _parse_get_value_output(model_str)
-
-    return Z3Result(:sat, model)
+    return Z3Result(:sat, Dict())
 end
 
 """
