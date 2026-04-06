@@ -15,8 +15,6 @@ include("Parsers/Parsers.jl") # Spec parsers (extensible)
 include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
 include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses AbstractOracle)
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
-# include("synthesizer.jl")  # [MISSING FILE - commented out]
-# include("verifier.jl")     # [MISSING FILE - commented out]
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 include("cegis_loop.jl")     # core loop — depends on all of the above
@@ -44,7 +42,7 @@ export
     VerificationResult,
     VerificationStatus,
     verified,
-    verification_failed,
+    counterexample_found,
     verification_error,
     AbstractOracle,
     IOExampleOracle,
