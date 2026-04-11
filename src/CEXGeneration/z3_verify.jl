@@ -168,6 +168,11 @@ Single Z3 call handles both satisfiability check and model extraction.
 - `Z3Result` — Contains satisfiability status and model (if sat)
 """
 function verify_query(query::String)::Z3Result
+    # Debug: print the query being sent to Z3
+    println("[DEBUG] Z3 Query:")
+    println(query)
+    println("[DEBUG] End of query\n")
+    
     # Run the full query (check-sat + get-value) in a single Z3 call
     # Z3 will return "unsat" (ignoring get-value) or "sat" with model values
     # On error, returns "unknown" to allow execution to continue
