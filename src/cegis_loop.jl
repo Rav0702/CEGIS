@@ -206,7 +206,8 @@ function run_ioexample_cegis(
         candidate, _ = synth_result
         verbose && @info "[$iteration] Candidate: $(rulenode2expr(candidate, grammar))"
 
-        oracle_problem = CEGISProblem(
+        # Create a dummy oracle_problem for extract_counterexample (backward compat with legacy code)
+        oracle_problem = CEGISProblemLegacy(
             grammar,
             start_symbol,
             problem.spec,

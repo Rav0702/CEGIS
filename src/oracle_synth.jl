@@ -15,168 +15,239 @@ Requires: CEGIS module and Herb packages to be loaded first.
 using Logging
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Generic CEGISProblem orchestrator
+# Grammar building utility (external step in new workflow)
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
-    run_synthesis(problem::CEGISProblem) :: CEGISResult
+    build_grammar_from_spec(spec_path::String; grammar_config=nothing, start_symbol=:Expr)
 
-Execute CEGIS synthesis loop using a generic CEGISProblem configuration.
+Build a grammar from a SyGuS specification file for use with synthesizers.
 
-This is the unified entry point for all synthesis tasks. It orchestrates:
-1. Problem initialization (parsing, grammar building, oracle creation)
-2. Iterator strategy creation
-3. CEGIS loop execution
-4. Optional desired solution checking
-5. Result collection
+This is a convenience utility for the external grammar-building step in the new
+`run_synthesis()` workflow. It handles:
+1. Parsing the specification file
+2. Detecting the logic (LIA, BV, etc.)
+3. Building an appropriate grammar
+4. Returning the grammar for iterator creation
 
 **Arguments**:
-- `problem::CEGISProblem` — Configuration-driven problem specification
+- `spec_path::String` — Path to .sl file (e.g., "benchmark.sl")
+
+**Options**:
+- `grammar_config` — GrammarConfig instance (default: auto-detect based on spec logic)
+- `start_symbol::Symbol` — Start non-terminal for grammar (default: :Expr)
 
 **Returns**:
-- `CEGISResult` — Synthesis outcome with status, program, iterations, and counterexamples
+- `AbstractGrammar` — Ready-to-use grammar for iterator creation
+
+**Errors**: Propagates any errors from spec parsing or grammar building
+
+**Example**:
+```julia
+# Build grammar once, reuse for multiple iterators
+grammar = build_grammar_from_spec("benchmark.sl")
+
+# Create multiple iterator strategies
+bfs_iterator = create_iterator(BFSIteratorConfig(max_depth=5), grammar, :Expr)
+dfs_iterator = create_iterator(DFSIteratorConfig(max_depth=7), grammar, :Expr)
+
+# Use with run_synthesis
+problem = CEGISProblem("benchmark.sl")
+result_bfs = run_synthesis(problem, bfs_iterator)
+result_dfs = run_synthesis(problem, dfs_iterator)
+```
+
+**See also**: run_synthesis(), create_iterator()
+"""
+function build_grammar_from_spec(spec_path::String; grammar_config=nothing, start_symbol::Symbol=:Expr) :: AbstractGrammar
+    # Step 1: Parse specification
+    parser = Parsers.SyGuSParser()
+    spec = Parsers.parse_spec(parser, spec_path)
+    
+    # Step 2: Determine grammar config (auto-detect if not provided)
+    if grammar_config === nothing
+        if GrammarBuilding.is_lia_problem(spec)
+            grammar_config = GrammarBuilding.lia_grammar_config()
+        else
+            grammar_config = GrammarBuilding.default_grammar_config()
+        end
+    end
+    
+    # Step 3: Build and return grammar
+    return GrammarBuilding.build_generic_grammar(spec, grammar_config)
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generic CEGISProblem orchestrator
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unified run_synthesis API with Multiple Dispatch
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+    run_synthesis(problem::CEGISProblem, iterator::ProgramIterator; keywords...) :: CEGISResult
+
+Execute CEGIS synthesis loop with oracle-driven verification.
+
+This is the main entry point for CEGISProblem synthesis. It follows the same
+signature as HerbSearch.synth() for consistency, with multiple dispatch handling
+different problem types.
+
+**Arguments**:
+- `problem::CEGISProblem` — Problem specification (spec_path + optional desired_solution)
+- `iterator::ProgramIterator` — Search strategy/iterator (e.g., BFSIterator, DFSIterator)
+
+**Options**:
+- `shortcircuit::Bool` — Stop evaluating after first failing example (default: true)
+- `allow_evaluation_errors::Bool` — Continue synthesis even if evaluation raises error (default: false)
+- `max_time::Float64` — Wall-clock time budget in seconds (default: Inf)
+- `max_enumerations::Int` — Enumeration limit (default: typemax(Int))
+- `mod::Module` — Module for custom function lookup (default: Main)
+- `eval_fn::Union{Function, Nothing}` — Custom evaluation function for advanced use (default: nothing)
+
+**Returns**:
+- `CEGISResult` — Synthesis outcome (status, program, iterations, counterexamples)
 
 **Process**:
-1. `ensure_initialized!(problem)` — Parse spec, build grammar, create oracle
-2. Create iterator via `create_iterator(problem.iterator_config, ...)`
-3. Run CEGIS loop (same as `synth_with_oracle()`)
-4. If `problem.desired_solution !== nothing`, verify it as debug check
-5. Return result
+1. Parse problem spec and create oracle (lazy initialization)
+2. Run CEGIS loop with provided iterator
+3. Return CEGISResult with synthesized program or best approximation
 
-**Examples**:
+**Example**:
 ```julia
-# Basic usage
-problem = CEGISProblem("spec.sl"; oracle_factory=..., ...)
-result = run_synthesis(problem)
+# Build components externally (clean separation of concerns)
+problem = CEGISProblem("benchmark.sl"; desired_solution="max(x, y)")
+grammar = build_grammar_from_spec("benchmark.sl")
+iterator = create_iterator(BFSIteratorConfig(max_depth=5), grammar, :Expr)
 
-# With inspection
-problem = CEGISProblem("spec.sl"; oracle_factory=..., ...)
-ensure_initialized!(problem)
-@assert !isempty(problem.grammar)
-result = run_synthesis(problem)
+# Run synthesis with unified API
+result = run_synthesis(
+    problem, iterator;
+    max_enumerations = 1_000_000,
+    max_time = 60.0
+)
 
-# With debugging
-problem = CEGISProblem("spec.sl"; desired_solution="max(x, y)")
-result = run_synthesis(problem)
+# Check result
 if result.status == cegis_success
-    println("Found: \$(rulenode2expr(result.program, problem.grammar))")
+    println("Found: \$(rulenode2expr(result.program, grammar))")
+else
+    println("Best found: \$(rulenode2expr(result.program, grammar))")
 end
 ```
 
-**Error handling**:
-- Throws if problem initialization fails (parser, grammar builder, or oracle creation)
-- Throws if iterator creation fails
-- Throws if desired_solution verification fails (if provided)
+**Differences from synth()**:
+- CEGISProblem path returns CEGISResult (with iterations and counterexamples)
+- Generic Problem path delegates to HerbSearch.synth() (returns Tuple{RuleNode, SynthResult})
+- CEGISProblem path uses oracle for formal verification
+- Generic Problem path uses specification examples for evaluation
+
+**See also**: run_synthesis(::Problem, ::ProgramIterator), build_grammar_from_spec()
 """
-function run_synthesis(problem::CEGISProblem) :: CEGISResult
-    # Step 1: Ensure all components are initialized
-    ensure_initialized!(problem)
+function run_synthesis(
+    problem::CEGISProblem,
+    iterator::ProgramIterator;
+    shortcircuit::Bool = true,
+    allow_evaluation_errors::Bool = false,
+    max_time::Float64 = Inf,
+    max_enumerations::Int = typemax(Int),
+    mod::Module = Main,
+    eval_fn::Union{Function, Nothing} = nothing) :: CEGISResult
     
-    # Step 2: Create iterator from configuration
-    iterator = IteratorConfig.create_iterator(
-        problem.iterator_config,
-        problem.grammar,
-        problem.start_symbol
-    )
+    # Extract grammar from iterator (following HerbSearch convention)
+    grammar = HerbSearch.get_grammar(iterator)
+    start_symbol = HerbSearch.get_starting_symbol(iterator)
     
-    # Step 3: Run CEGIS synthesis loop
-    # Delegate to the existing synth_with_oracle() function
+    # Create oracle from spec (lazy initialization)
+    ensure_initialized!(problem, OracleFactories.create_oracle(
+        OracleFactories.Z3OracleFactory(),
+        problem.spec !== nothing ? problem.spec : Parsers.parse_spec(problem.spec_parser, problem.spec_path),
+        grammar
+    ))
+    
+    # Run CEGIS synthesis loop
     result_tuple = synth_with_oracle(
-        problem.grammar,
-        problem.start_symbol,
+        grammar,
+        start_symbol,
         problem.oracle;
-        max_depth = problem.max_depth,
-        max_time = problem.max_time,
-        max_enumerations = problem.max_enumerations,
+        max_depth = HerbSearch.get_max_depth(iterator),
+        max_time = max_time,
+        max_enumerations = max_enumerations,
+        shortcircuit = shortcircuit,
+        allow_evaluation_errors = allow_evaluation_errors,
+        mod = mod,
         iterator = iterator,
         desired_solution = problem.desired_solution,
+        eval_fn = eval_fn,
     )
     
-    result = result_tuple.result
-    
-    # Step 4: Optional: Generate debug query for desired solution if synthesis didn't succeed
-    if problem.desired_solution !== nothing && result.status != cegis_success
-        try
-            desired_expr = problem.desired_solution
-            candidate_smt = CEGIS.CEXGeneration.to_smt2(
-                CEGIS.CEXGeneration.get_default_candidate_parser(),
-                desired_expr
-            )
-            
-            if !isempty(problem.spec.synth_funs)
-                func_name = problem.spec.synth_funs[1].name
-                candidates_dict = Dict(func_name => candidate_smt)
-                query = CEGIS.CEXGeneration.generate_cex_query(problem.spec, candidates_dict)
-                
-                @debug "Generated Z3 query for desired solution:" query
-                
-                # Now actually run the query through Z3
-                @debug "Running query through Z3"
-                try
-                    # Use the public API to verify the query
-                    z3_result = CEGIS.CEXGeneration.verify_query(query)
-                    
-                    if z3_result.status == :sat
-                        @debug "Z3 Result: SAT (found counterexample)" model=z3_result.model
-                    elseif z3_result.status == :unsat
-                        @debug "Z3 Result: UNSAT (desired solution is VALID!)"
-                    else
-                        @debug "Z3 Result: $(z3_result.status)"
-                    end
-                catch e
-                    @debug "Error running Z3" exception=e
-                end
-            end
-        catch e
-            # Silently fail - not critical for synthesis
-        end
-    end
-    
-    return result
+    return result_tuple.result
 end
 
 """
-    check_desired_solution(problem::CEGISProblem, result::CEGISResult)
+    run_synthesis(problem::Problem, iterator::ProgramIterator; keywords...) ::
+        Union{Tuple{RuleNode, SynthResult}, Nothing}
 
-[DEBUG HELPER] Verify a desired solution against the problem specification.
+Generic synthesis dispatcher for HerbSpecification.Problem types.
 
-# Automatically checks and prints result of desired_solution
+This method delegates to HerbSearch.synth() for non-CEGIS problems, providing
+a unified API across CEGIS and standard synthesis workflows.
+
+**Arguments**:
+- `problem::Problem` — HerbSpecification problem with IO examples
+- `iterator::ProgramIterator` — Search strategy
+
+**Options**:
+- `shortcircuit::Bool` — Stop after first failing example (default: true)
+- `allow_evaluation_errors::Bool` — Continue on evaluation error (default: false)
+- `max_time::Float64` — Time budget seconds (default: Inf)
+- `max_enumerations::Int` — Enumeration limit (default: typemax(Int))
+- `mod::Module` — Module for custom functions (default: Main)
+
+**Returns**:
+- `Tuple{RuleNode, SynthResult}` — Synthesized program and optimality flag
+- `Nothing` — If no valid program found and options prevent returning suboptimal
+
+**Example**:
+```julia
+using HerbSpecification, HerbSearch
+
+# Standard HerbSearch workflow
+spec = [IOExample(Dict(:x => 1, :y => 2), 2),
+        IOExample(Dict(:x => 3, :y => 4), 7)]
+problem = Problem(spec)
+grammar = @csgrammar begin
+    Expr = x | y | Expr + Expr | Expr - Expr | Expr * Expr
+end
+iterator = BFSIterator(solver=GenericSolver(grammar); max_depth=5)
+
+# Can now use run_synthesis instead of synth
+result = run_synthesis(problem, iterator)
 ```
+
+**Note**: Returns None (not wrapped in CEGISResult) to match HerbSearch.synth() semantics.
+
+**See also**: run_synthesis(::CEGISProblem, ::ProgramIterator), HerbSearch.synth()
 """
-function check_desired_solution(problem::CEGISProblem, result::CEGISResult)
-    @debug "Checking desired solution" expression=problem.desired_solution
+function run_synthesis(
+    problem::Problem,
+    iterator::ProgramIterator;
+    shortcircuit::Bool = true,
+    allow_evaluation_errors::Bool = false,
+    max_time::Float64 = Inf,
+    max_enumerations::Int = typemax(Int),
+    mod::Module = Main) :: Union{Tuple{RuleNode, SynthResult}, Nothing}
     
-    try
-        # Step 1: Parse the solution string as a Julia expression
-        solution_expr = Meta.parse(problem.desired_solution)
-        
-        # Step 2: Create an empty problem to test against oracle
-        test_problem = Problem(problem.spec.spec)  # Use existing spec examples
-        
-        # Step 3: Check solution against oracle
-        if problem.oracle !== nothing && hasmethod(extract_counterexample, (typeof(problem.oracle), typeof(test_problem), Any,))
-            cx = extract_counterexample(problem.oracle, problem, nothing)
-            
-            if cx === nothing
-                println("  Status: DESIRED SOLUTION VERIFIED")
-            else
-                println("  Status: DESIRED SOLUTION INVALID")
-                println("  Counterexample found:")
-                println("    Input: $(cx.input)")
-                println("    Expected: $(cx.expected_output)")
-                println("    Got: $(cx.actual_output)")
-            end
-        else
-            # Fallback: Just report that it parsed successfully
-            println("  Status: PARSED SUCCESSFULLY")
-            println("  Note: Full verification requires oracle setup")
-        end
-    catch e
-        println("  Status: PARSE ERROR")
-        println("  Error: $(e)")
-    end
-    
-    println("="^80 * "\n")
+    # Delegate to HerbSearch.synth()
+    return HerbSearch.synth(
+        problem,
+        iterator;
+        shortcircuit = shortcircuit,
+        allow_evaluation_errors = allow_evaluation_errors,
+        max_time = max_time,
+        max_enumerations = max_enumerations,
+        mod = mod
+    )
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -187,21 +258,48 @@ end
 """
     synth_with_oracle(grammar, start_symbol, oracle; ...)
 
-Synthesis loop with oracle-driven CEGIS. Returns (result=CEGISResult, satisfied_examples=Int).
+**[INTERNAL/LEGACY]** Synthesis loop with oracle-driven CEGIS. 
 
-**NEW PARAMETER** (Phase 2): 
+This function is kept for backward compatibility. **New code should use `run_synthesis()`**
+which provides a unified API matching HerbSearch.synth().
+
+For most users, prefer:
+```julia
+problem = CEGISProblem("spec.sl")
+grammar = build_grammar_from_spec("spec.sl")  # external step
+iterator = create_iterator(BFSIteratorConfig(max_depth=5), grammar, :Expr)  # external step
+result = run_synthesis(problem, iterator; max_enumerations=10_000_000)  # unified API
+```
+
+**Legacy API** (deprecated, but still functional):
+```julia
+# Old way (not recommended)
+result, satisfied = synth_with_oracle(grammar, start_symbol, oracle; max_depth=5, ...)
+```
+
+**Returns**: `(result=CEGISResult, satisfied_examples=Int)` — NamedTuple with synthesis result
+
+**KeywordArguments**:
 - `iterator` — Optional pre-constructed iterator. If not provided, creates BFSIterator.
+- `desired_solution` — Optional target solution string for debug logging
+- `eval_fn` — Optional custom evaluation function (for CustomInterpreterOracle)
 
 **Backward Compatibility**:
 - Old code: `synth_with_oracle(grammar, start_symbol, oracle)` still works (uses BFSIterator)
-- New code: `synth_with_oracle(grammar, start_symbol, oracle; iterator=my_iterator)` uses custom iterator
+- New code: Use `run_synthesis(problem, iterator; ...)` instead
+
+**Note**: `synth_with_oracle()` may be removed in a future major version. 
+Use `run_synthesis()` for new code.
+
+**See also**: run_synthesis(), CEGISProblem
 """
 function synth_with_oracle(
     grammar::AbstractGrammar, start_symbol::Symbol, oracle::AbstractOracle;
     max_depth::Int=5, max_time::Float64=Inf, max_enumerations::Int=50_000,
     shortcircuit::Bool=true, allow_evaluation_errors::Bool=false, mod::Module=Main,
     iterator::Union{Any, Nothing}=nothing,
-    desired_solution::Union{String, Nothing}=nothing
+    desired_solution::Union{String, Nothing}=nothing,
+    eval_fn::Union{Function, Nothing}=nothing
 )
     start_time = time()
     problem = Problem(IOExample[])

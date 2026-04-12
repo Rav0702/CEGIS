@@ -48,11 +48,12 @@ export
     IOExampleOracle,
     Z3Oracle,
 
-    # Main entry point
+    # Main entry points
     run_cegis,
     run_ioexample_cegis,
     run_synthesis,
     synth_with_oracle,
+    build_grammar_from_spec,
     check_desired_solution,
 
     # Counterexample management

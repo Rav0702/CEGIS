@@ -49,20 +49,31 @@ for (name, config) in BENCHMARKS
             println("      Expected: TBD (will check with Z3)")
         end
         
+        # NEW API: Minimal problem construction
         problem = CEGIS.CEGISProblem(
             config.path;
-            iterator_config = CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
             desired_solution = config.expected,
+        )
+        
+        # NEW API: Build grammar externally
+        grammar = CEGIS.build_grammar_from_spec(config.path)
+        
+        # NEW API: Create iterator externally
+        iterator = CEGIS.IteratorConfig.create_iterator(
+            CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
+            grammar,
+            :Expr
+        )
+        
+        # NEW API: Unified run_synthesis with all parameters
+        result = CEGIS.run_synthesis(
+            problem, iterator;
             max_enumerations = 10_000_000,
         )
         
-        CEGIS.ensure_initialized!(problem)
-        println("      [DEBUG] Oracle type: $(typeof(problem.oracle))")
-        result = CEGIS.run_synthesis(problem)
-        
         # Check if we found a solution
         if result.program !== nothing
-            solution_expr = HerbGrammar.rulenode2expr(result.program, problem.grammar)
+            solution_expr = HerbGrammar.rulenode2expr(result.program, grammar)
             solution_str = string(solution_expr)
             status_str = "$(result.status)"
             println("      Found:    $solution_str")
