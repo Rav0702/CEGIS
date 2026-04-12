@@ -12,6 +12,8 @@ Requires: CEGIS module and Herb packages to be loaded first.
 - `run_synthesis()` — New generic CEGISProblem orchestrator (recommended)
 """
 
+using Logging
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Generic CEGISProblem orchestrator
 # ─────────────────────────────────────────────────────────────────────────────
@@ -106,29 +108,23 @@ function run_synthesis(problem::CEGISProblem) :: CEGISResult
                 candidates_dict = Dict(func_name => candidate_smt)
                 query = CEGIS.CEXGeneration.generate_cex_query(problem.spec, candidates_dict)
                 
-                println("\n[DEBUG] Generated Z3 query for desired solution:")
-                println("="^70)
-                println(query)
-                println("="^70)
-                println()
+                @debug "Generated Z3 query for desired solution:" query
                 
                 # Now actually run the query through Z3
-                println("[DEBUG] Running query through Z3...")
+                @debug "Running query through Z3"
                 try
                     # Use the public API to verify the query
                     z3_result = CEGIS.CEXGeneration.verify_query(query)
                     
                     if z3_result.status == :sat
-                        println("[DEBUG] Z3 Result: SAT (found counterexample)")
-                        println("[DEBUG] Counterexample model:")
-                        println(z3_result.model)
+                        @debug "Z3 Result: SAT (found counterexample)" model=z3_result.model
                     elseif z3_result.status == :unsat
-                        println("[DEBUG] Z3 Result: UNSAT  (desired solution is VALID!)")
+                        @debug "Z3 Result: UNSAT (desired solution is VALID!)"
                     else
-                        println("[DEBUG] Z3 Result: $(z3_result.status)")
+                        @debug "Z3 Result: $(z3_result.status)"
                     end
                 catch e
-                    println("[DEBUG] Error running Z3: $e")
+                    @debug "Error running Z3" exception=e
                 end
             end
         catch e
@@ -148,9 +144,7 @@ end
 ```
 """
 function check_desired_solution(problem::CEGISProblem, result::CEGISResult)
-    println("\n" * "="^80)
-    println("[DEBUG] Checking desired solution:")
-    println("  Expression: $(problem.desired_solution)")
+    @debug "Checking desired solution" expression=problem.desired_solution
     
     try
         # Step 1: Parse the solution string as a Julia expression
@@ -260,7 +254,7 @@ function synth_with_oracle(
         if desired_solution !== nothing && expr_str == desired_solution
             desired_expr = rulenode2expr(candidate_program, grammar)
             desired_satisfied = count_satisfied(candidate_program)
-            println("[enum=$num_enum] [DEBUG] DESIRED SOLUTION ENCOUNTERED: $expr_str | satisfies $(desired_satisfied)/$(length(problem.spec)) counterexamples")
+            @debug "DESIRED SOLUTION ENCOUNTERED" num_enum expr=expr_str satisfied=desired_satisfied total=length(problem.spec)
         end
         
         expr = rulenode2expr(candidate_program, grammar)

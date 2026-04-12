@@ -27,6 +27,7 @@ grammar = build_generic_grammar(spec, config)
 
 using HerbCore
 using HerbGrammar
+using Logging
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Base operation sets (reusable across problems)
@@ -319,8 +320,7 @@ function build_generic_grammar(spec::Any, config::GrammarConfig) :: AbstractGram
     )
     
     # Debug: print generated grammar
-    println("[DEBUG] Generated grammar:")
-    println(grammar_str)
+    @debug "Generated grammar:" grammar_definition=grammar_str
     
     # Step 4: Evaluate the grammar definition
     # This is a meta-programming step that creates the grammar dynamically
