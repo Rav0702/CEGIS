@@ -41,7 +41,7 @@ function _z3_run(query::String)::String
         proc = run(pipeline(ignorestatus(`z3 $tmp`); stdout=out, stderr=err); wait=true)
         result = strip(String(take!(out)))
 
-        @debug "Z3: Subprocess completed" exit_code=proc.exitcode result_preview=first(result, 80)
+        @debug "Z3: Subprocess completed" exit_code=proc.exitcode result_preview=first(result, min(length(result), 80))
 
         # Check result first—if it starts with unsat or sat, it's valid regardless of exit code
         if startswith(result, "unsat") || startswith(result, "sat")
