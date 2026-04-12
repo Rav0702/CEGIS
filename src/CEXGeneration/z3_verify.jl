@@ -1,7 +1,7 @@
 """
 Z3 verification and counterexample extraction using Z3 Julia module.
 
-Single-call approach (optimized):
+Single-call approach:
   Query: Base query (set-logic, set-option, declarations + assertions + check-sat + get-value)
          → Single Z3 subprocess call that handles both sat/unsat checks and model extraction
          → For SAT: returns "sat" followed by model values
@@ -34,12 +34,30 @@ function _z3_run(query::String)::String
         @debug "Z3: Writing query to temp file" tmp
         write(tmp, query)
         @debug "Z3: Executing z3 subprocess"
-        result = readchomp(`z3 $tmp`)
-        @debug "Z3: Subprocess completed" result_lines = length(split(result, '\n'))
+
+        out = IOBuffer()
+        err = IOBuffer()
+        # ignorestatus: don't throw on non-zero exit code (Z3 exits 1 for unsat)
+        proc = run(pipeline(ignorestatus(`z3 $tmp`); stdout=out, stderr=err); wait=true)
+        result = strip(String(take!(out)))
+
+        @debug "Z3: Subprocess completed" exit_code=proc.exitcode result_preview=first(result, 80)
+
+        # Check result first—if it starts with unsat or sat, it's valid regardless of exit code
+        if startswith(result, "unsat") || startswith(result, "sat")
+            return result
+        end
+
+        # If exit code is non-zero and result doesn't start with unsat/sat, it's a real error
+        if proc.exitcode != 0
+            err_msg = strip(String(take!(err)))
+            error("Z3 failed with exit code $(proc.exitcode):\n$err_msg\nStdout: $result")
+        end
+
         return result
     catch e
-        # @warn "Z3: Execution failed, returning unsat status" exception=e
-        return "unsat"
+        @debug "Z3: Unexpected Julia-level exception" exception=e
+        rethrow()
     finally
         isfile(tmp) && rm(tmp)
     end
@@ -175,7 +193,6 @@ function verify_query(query::String)::Z3Result
     
     # Run the full query (check-sat + get-value) in a single Z3 call
     # Z3 will return "unsat" (ignoring get-value) or "sat" with model values
-    # On error, returns "unknown" to allow execution to continue
     out = _z3_run(query)
 
     lines = [strip(line) for line in split(out, '\n') if !isempty(strip(line))]

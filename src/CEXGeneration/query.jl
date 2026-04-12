@@ -263,8 +263,8 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     end
     
     # Now assert that the candidate violates any constraint by checking if it doesn't match spec output
-    # Instead of copying all constraints, we just check: candidate_output ≠ spec_output
-    # This works because spec_output is already constrained to be valid by the spec assertions above
+    #  we check: candidate_output ≠ spec_output
+    # spec_output is already constrained to be valid by the spec assertions above
     # counterexamples: unsat = candidate is correct, sat = we found a counterexample
     if !isempty(spec.synth_funs)
         push!(query_parts, "; Check if candidate violates any constraint")
