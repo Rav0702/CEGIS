@@ -54,7 +54,7 @@ function verify_program(spec_file::String, program_str::String, program_name::St
         query = CEGIS.CEXGeneration.generate_cex_query(spec, candidates)
         
         println("\n[✓] Query constructed ($(length(query)) bytes)")
-        println(query[1:length(query)])
+        println(query)
   
         
         # Verify the query with Z3
