@@ -20,8 +20,8 @@ push!(LOAD_PATH, CEGIS_SRC)
 using HerbCore, HerbGrammar, HerbSearch, HerbSpecification, HerbInterpret, Symbolics
 include(joinpath(CEGIS_SRC, "CEGIS.jl"))
 
+"""Verify a single program against a specification using Z3."""
 function verify_program(spec_file::String, program_str::String, program_name::String = "Program")
-    """Verify a single program against a specification using Z3."""
     println("\n" * "="^70)
     println("Verifying: $program_name")
     println("Specification: $(basename(spec_file))")
