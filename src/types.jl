@@ -173,99 +173,60 @@ end
 """
     mutable struct CEGISProblem
 
-Generic, configuration-driven CEGIS problem specification.
+Lightweight specification-driven CEGIS problem container.
 
-This new CEGISProblem type replaces the rigid legacy version with a fully
-extensible architecture supporting:
-- Multiple specification formats (SyGuS, JSON, YAML, custom DSLs)
-- Pluggable oracle selection (Z3, test-based, custom verifiers)
-- Configurable search strategies (BFS, DFS, random, custom iterators)
-- Debug support with optional desired solution checking
+This CEGISProblem type provides a minimal problem specification that pairs with
+the unified `run_synthesis()` API. All synthesis parameters are passed to
+`run_synthesis()` rather than stored in the problem, following the same pattern
+as HerbSearch's `synth()` function.
 
-**Configuration Fields**:
-- `spec_path                 :: String`  — Path to specification file
-- `spec_parser              :: AbstractSpecParser` — Parser for spec format
-- `grammar_config           :: GrammarConfig` — Grammar configuration
-- `oracle_factory           :: AbstractOracleFactory` — Oracle factory
-- `iterator_config          :: AbstractSynthesisIterator` — Iterator strategy
-- `desired_solution         :: Union{String, Nothing}` — (NEW) Optional target solution for debugging
-
-**Synthesis Parameters**:
-- `start_symbol             :: Symbol` — Start non-terminal (default: :Expr)
-- `max_depth                :: Int` — Maximum program depth (default: 5)
-- `max_enumerations         :: Int` — Enumeration limit (default: 50_000)
-- `max_time                 :: Float64` — Time budget in seconds (default: Inf)
-- `max_iterations           :: Int` — CEGIS rounds limit (default: 100)
+**Core Fields**:
+- `spec_path                 :: String`  — Path to specification file (e.g., "benchmark.sl")
+- `desired_solution         :: Union{String, Nothing}` — Optional target solution for debugging
 
 **Parsed Components (Lazy-Initialized)**:
 - `spec                     :: Union{Spec, Nothing}` — Parsed specification
-- `grammar                  :: Union{AbstractGrammar, Nothing}` — Built grammar
-- `oracle                   :: Union{AbstractOracle, Nothing}` — Oracle instance
+- `spec_parser              :: Any` — Parser instance for lazy loading
+- `oracle                   :: Union{AbstractOracle, Nothing}` — Oracle instance (lazy)
 - `is_initialized           :: Bool` — Initialization status
 
-**Metadata & Analysis**:
-- `metadata                 :: Dict{String, Any}` — User-defined metadata
-
-**Lazy Initialization**:
-Parsed fields are populated only when `ensure_initialized!()` is called or
-when synthesis begins. This allows:
-- Configuration inspection before running
-- Better error messages (fails on init, not mid-synthesis)
-- Easier debugging and testing
+**Design Rationale**:
+- **Lightweight**: Only stores spec file path and optional debug target
+- **Separation of concerns**: Synthesis parameters (iterator, max_enumerations, etc.)
+  are passed to `run_synthesis()` rather than stored in problem
+- **Lazy initialization**: Spec and oracle are only loaded when actually needed
+- **Unified API**: Matches HerbSearch.synth() signature for consistency
 
 **Example Usage**:
 
 ```julia
-# Minimal setup (uses all defaults)
-problem = CEGISProblem("spec.sl")
-result = run_synthesis(problem)
+# Minimal setup
+problem = CEGISProblem("spec.sl"; desired_solution="max(x, y)")
 
-# Custom parser and oracle
-problem = CEGISProblem(
-    "spec.sl";
-    oracle_factory = Z3OracleFactory(parser=SymbolicCandidateParser()),
-    iterator_config = DFSIteratorConfig(max_depth=8)
+# Build grammar and iterator externally
+grammar = build_grammar_from_spec("spec.sl")
+iterator = create_iterator(BFSIteratorConfig(max_depth=5), grammar, :Expr)
+
+# Run synthesis with unified run_synthesis() API
+result = run_synthesis(
+    problem, iterator;
+    max_enumerations = 10_000_000,
+    max_time = 60.0
 )
-result = run_synthesis(problem)
-
-# With debugging
-problem = CEGISProblem(
-    "spec.sl";
-    desired_solution = "ifelse(x > 5, x+y, z)"
-)
-result = run_synthesis(problem)
-
-# Manual initialization for inspection
-problem = CEGISProblem("spec.sl")
-ensure_initialized!(problem)
-println("Grammar size: \$(length(problem.grammar))")
 ```
 
-**Backward Compatibility**: The legacy `synth_with_oracle()` function continues
-to work with old-style oracle objects.
+**See also**: `run_synthesis()`, `build_grammar_from_spec()`, `create_iterator()`
 """
 mutable struct CEGISProblem
-    # Configuration (immutable after construction)
+    # Problem specification (required)
     spec_path               :: String
-    spec_parser             :: Any  # AbstractSpecParser
-    grammar_config          :: Any  # GrammarConfig
-    oracle_factory          :: Any  # AbstractOracleFactory
-    iterator_config         :: Any  # AbstractSynthesisIterator
-    
-    # Synthesis parameters
-    start_symbol            :: Symbol
-    max_depth               :: Int
-    max_enumerations        :: Int
-    max_time                :: Float64
-    max_iterations          :: Int
     
     # Debug / Analysis
     desired_solution        :: Union{String, Nothing}
-    metadata                :: Dict{String, Any}
     
     # Parsed components (lazy-initialized)
     spec                    :: Union{Any, Nothing}  # CEXGeneration.Spec
-    grammar                 :: Union{AbstractGrammar, Nothing}
+    spec_parser             :: Any  # Parser instance
     oracle                  :: Union{Any, Nothing}  # AbstractOracle
     
     # State
@@ -273,167 +234,111 @@ mutable struct CEGISProblem
 end
 
 """
-    CEGISProblem(spec_path; <options>)
+    CEGISProblem(spec_path; desired_solution=nothing)
 
-Construct a new generic CEGISProblem with configuration.
+Construct a lightweight CEGISProblem from a specification file path.
 
 **Arguments**:
-- `spec_path::String` — Path to specification file
+- `spec_path::String` — Path to specification file (e.g., "benchmark.sl")
 
 **Options**:
-- `spec_parser::AbstractSpecParser` — Parser for spec format (default: SyGuSParser)
-- `grammar_config::GrammarConfig` — Grammar configuration (default: default_grammar_config())
-- `oracle_factory::AbstractOracleFactory` — Oracle factory (default: default_oracle_factory())
-- `iterator_config::AbstractSynthesisIterator` — Iterator config (default: default_iterator_config())
-- `start_symbol::Symbol` — Start non-terminal (default: :Expr)
-- `max_depth::Int` — Max program depth (default: 5)
-- `max_enumerations::Int` — Enumeration limit (default: 50_000)
-- `max_time::Float64` — Time budget (default: Inf)
-- `max_iterations::Int` — CEGIS rounds limit (default: 100)
-- `desired_solution::Union{String, Nothing}` — Debug target solution (default: nothing)
-- `metadata::Dict{String, Any}` — Problem metadata (default: empty)
+- `desired_solution::Union{String, Nothing}` — Optional debug target solution
+  (enables debug logging if synthesis doesn't find this exact program)
 
-**Returns**: CEGISProblem instance (not yet initialized; call ensure_initialized!() to parse)
+**Returns**: CEGISProblem instance with lazy-initialized spec and oracle
 
-**Throws**: ArgumentError if spec_path doesn't exist
+**Throws**: Error if spec_path doesn't exist
 
 **Example**:
 ```julia
-# Uses all defaults (SyGuSParser, Z3OracleFactory, BFSIteratorConfig)
+# Basic: Just spec file path
 problem = CEGISProblem("benchmark.sl")
 
-# Custom configuration
-@with_module CEGIS begin
-    problem = CEGISProblem(
-        "benchmark.sl";
-        oracle_factory = Z3OracleFactory(),
-        iterator_config = DFSIteratorConfig(max_depth=7),
-        desired_solution = "max(x, y)",
-        metadata = Dict("source" => "SyGuS competition")
-    )
-end
+# With debug target
+problem = CEGISProblem("benchmark.sl"; desired_solution="max(x, y)")
+
+# Then use with run_synthesis
+grammar = build_grammar_from_spec("benchmark.sl")
+iterator = create_iterator(BFSIteratorConfig(max_depth=5), grammar, :Expr)
+result = run_synthesis(problem, iterator; max_enumerations=10_000_000)
 ```
 
-**Note**: This constructor requires that default factory functions are exported
-from the CEGIS module for automatic defaults to work.
+**Note**: Synthesis parameters (max_depth, max_enumerations, max_time, etc.)
+are passed directly to `run_synthesis()`, not stored in the problem.
+See `run_synthesis()` for the complete API.
 """
 function CEGISProblem(
     spec_path :: String;
-    spec_parser             :: Any = nothing,
-    grammar_config          :: Any = nothing,
-    oracle_factory          :: Any = nothing,
-    iterator_config         :: Any = nothing,
-    start_symbol            :: Symbol = :Expr,
-    max_depth               :: Int = 5,
-    max_enumerations        :: Int = 50_000,
-    max_time                :: Float64 = Inf,
-    max_iterations          :: Int = 100,
-    desired_solution        :: Union{String, Nothing} = nothing,
-    metadata                :: Dict{String, Any} = Dict{String, Any}(),
+    desired_solution :: Union{String, Nothing} = nothing,
 )
     # Validate spec_path
     !isfile(spec_path) && error("Specification file not found: $spec_path")
     
-    # Validate parameters
-    max_depth >= 1 || error("max_depth must be >= 1, got $max_depth")
-    max_enumerations >= 1 || error("max_enumerations must be >= 1, got $max_enumerations")
-    
-    # Note: Defaults for spec_parser, grammar_config, oracle_factory, iterator_config
-    # are not set here because they depend on modules not yet loaded.
-    # They will be set by ensure_initialized!() if left as nothing.
-    # Alternatively, the CEGIS module can be extended to provide factory functions.
-    
-    # Provide sensible defaults if not specified
-    if spec_parser === nothing
-        spec_parser = Parsers.SyGuSParser()
-    end
-    
-    if grammar_config === nothing
-        grammar_config = GrammarBuilding.default_grammar_config()
-    end
-    
-    if oracle_factory === nothing
-        oracle_factory = OracleFactories.Z3OracleFactory()
-    end
-    
-    if iterator_config === nothing
-        iterator_config = IteratorConfig.BFSIteratorConfig(max_depth = max_depth)
-    end
+    # Create parser instance (used for lazy loading)
+    parser = Parsers.SyGuSParser()
     
     return CEGISProblem(
         spec_path,
-        spec_parser,
-        grammar_config,
-        oracle_factory,
-        iterator_config,
-        start_symbol,
-        max_depth,
-        max_enumerations,
-        max_time,
-        max_iterations,
         desired_solution,
-        metadata,
-        nothing,  # spec (not yet parsed)
-        nothing,  # grammar (not yet built)
-        nothing,  # oracle (not yet created)
-        false,    # is_initialized
+        nothing,   # spec (not yet parsed)
+        parser,    # spec_parser
+        nothing,   # oracle (not yet created)
+        false,     # is_initialized
     )
 end
 
 """
-    ensure_initialized!(problem::CEGISProblem)
+    ensure_initialized!(problem::CEGISProblem, oracle; spec_parser=nothing)
 
-Initialize a CEGISProblem by parsing spec, building grammar, and creating oracle.
+Initialize a CEGISProblem by parsing its specification file.
 
-This function is called automatically at the start of synthesis. Can be called
-manually for inspection or error checking before running.
+This function is called by `run_synthesis()` to lazily load the spec once it's
+needed. Since grammar and oracle are built externally and passed to `run_synthesis()`,
+this function only handles spec parsing.
 
-**Process**:
-1. Parse specification (if not already parsed)
-2. Build grammar from spec and config
-3. Create oracle via factory
-4. Set is_initialized flag
+**Arguments**:
+- `problem::CEGISProblem` — Problem to initialize
+- `oracle` — The oracle instance (used to access the parsed spec)
 
-**Errors**: Propagates any errors from parsers, builders, or factories.
+**Options**:
+- `spec_parser` — Parser instance (default: problem.spec_parser)
+
+**Errors**: Propagates any errors from spec parser.
+
+**Side effects**: Modifies problem.spec and problem.is_initialized
 
 **Example**:
 ```julia
 problem = CEGISProblem("spec.sl")
-ensure_initialized!(problem)
+oracle = create_oracle(spec, grammar)  # Created externally
+ensure_initialized!(problem, oracle)
 
-# Now inspect problem state
-println("Grammar start_symbol: \$(problem.start_symbol)")
-println("Is initialized: \$(problem.is_initialized)")
+# Now problem.spec is populated for use in CEGIS loop
 ```
 
-**Side effects**: Modifies problem.spec, problem.grammar, problem.oracle, problem.is_initialized
+**Note**: This is a lightweight init that only parses the spec. The oracle is
+passed in (created by the caller) rather than being created here. This maintains
+the lazy initialization pattern while keeping the problem lightweight.
 """
-function ensure_initialized!(problem::CEGISProblem)
+function ensure_initialized!(problem::CEGISProblem, oracle; spec_parser=nothing)
     if problem.is_initialized
         return  # Already initialized, skip
     end
     
-    # Step 1: Parse specification
+    # Use provided parser or fall back to problem's
+    parser = spec_parser !== nothing ? spec_parser : problem.spec_parser
+    
+    # Step 1: Parse specification (lazy load)
     if problem.spec === nothing
-        problem.spec = Parsers.parse_spec(problem.spec_parser, problem.spec_path)
+        problem.spec = Parsers.parse_spec(parser, problem.spec_path)
     end
     
-    # Step 2: Build grammar
-    if problem.grammar === nothing
-        # If spec is LIA but using default config with BASE_OPERATIONS, upgrade to LIA_OPERATIONS
-        grammar_config = problem.grammar_config
-        if GrammarBuilding.is_lia_problem(problem.spec) && grammar_config.base_operations === GrammarBuilding.BASE_OPERATIONS
-            grammar_config = GrammarBuilding.lia_grammar_config()
-        end
-        problem.grammar = GrammarBuilding.build_generic_grammar(problem.spec, grammar_config)
-    end
-    
-    # Step 3: Create oracle
+    # Step 2: Store oracle reference
     if problem.oracle === nothing
-        problem.oracle = OracleFactories.create_oracle(problem.oracle_factory, problem.spec, problem.grammar)
+        problem.oracle = oracle
     end
     
-    # Step 4: Mark as initialized
+    # Step 3: Mark as initialized
     problem.is_initialized = true
 end
 

@@ -21,6 +21,7 @@ export
     AbstractSynthesisIterator,
     BFSIteratorConfig,
     DFSIteratorConfig,
+    RandomSearchIteratorConfig,
     create_iterator
 
 end # module IteratorConfig

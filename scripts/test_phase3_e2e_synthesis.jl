@@ -10,15 +10,15 @@ const BENCHMARK_DIR = joinpath(dirname(@__DIR__), "spec_files", "phase3_benchmar
 const SPEC_DIR = joinpath(dirname(@__DIR__), "spec_files")
 
 const BENCHMARKS = Dict(
-    # "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
-   # "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
-    # "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
+     "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
+    "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
+     "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
       "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
-    # "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
-    # "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
-    # "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
-    # "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
-    # "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
+     "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
+     "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
+     "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
+     "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
+    "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
  )
 
 #   ============================================================ 2 native queries 1M enums
@@ -51,30 +51,35 @@ for (name, config) in BENCHMARKS
         
         problem = CEGIS.CEGISProblem(
             config.path;
-            iterator_config = CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
             desired_solution = config.expected,
-            max_enumerations = 10_000_000,
+        )
+        grammar = CEGIS.build_grammar_from_spec(config.path)
+        iterator = CEGIS.IteratorConfig.create_iterator(
+            CEGIS.IteratorConfig.BFSIteratorConfig(max_depth=5),
+            grammar,
+            :Expr
         )
         
-        CEGIS.ensure_initialized!(problem)
-        println("      [DEBUG] Oracle type: $(typeof(problem.oracle))")
-        result = CEGIS.run_synthesis(problem)
+        result = CEGIS.run_synthesis(
+            problem, iterator;
+            max_enumerations = 1_000_000,
+        )
         
         # Check if we found a solution
         if result.program !== nothing
-            solution_expr = HerbGrammar.rulenode2expr(result.program, problem.grammar)
+            solution_expr = HerbGrammar.rulenode2expr(result.program, grammar)
             solution_str = string(solution_expr)
             status_str = "$(result.status)"
             println("      Found:    $solution_str")
-            push!(results, (name=name, status=status_str, iters=result.iterations, found=true))
+            push!(results, (name=name, status=status_str, iters=result.iterations, found=true, solution=solution_str, expected=config.expected))
         else
             println("      Found:    NONE")
-            push!(results, (name=name, status="$(result.status)", iters=result.iterations, found=false))
+            push!(results, (name=name, status="$(result.status)", iters=result.iterations, found=false, solution=nothing, expected=config.expected))
         end
         println()
     catch e
         println("      ERROR: $e\n")
-        push!(results, (name=name, status="ERROR", iters=0, found=false))
+        push!(results, (name=name, status="ERROR", iters=0, found=false, solution=nothing, expected=config.expected))
     end
 end
 
@@ -82,7 +87,16 @@ println("\n" * "="^60)
 println("SUMMARY:")
 for r in results
     found_str = r.found ? "✓" : "✗"
-    println("  $found_str $r")
+    expected_str = r.expected !== nothing ? r.expected : "TBD"
+    match_str = ""
+    if r.found && r.expected !== nothing
+        match_str = r.solution == r.expected ? "MATCH" : "MISMATCH"
+    end
+    println("  $found_str (name = \"$(r.name)\", status = \"$(r.status)\", iters = $(r.iters), found = $(r.found))")
+    if r.found
+        println("      Found:    $(r.solution)")
+        println("      Expected: $expected_str $match_str")
+    end
 end
 success_count = sum(r.found for r in results)
 println("\nSolutions found: $success_count / $(length(results))")

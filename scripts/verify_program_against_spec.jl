@@ -17,7 +17,7 @@ CEGIS_ROOT = dirname(@__DIR__)
 CEGIS_SRC = joinpath(CEGIS_ROOT, "src")
 push!(LOAD_PATH, CEGIS_SRC)
 
-using HerbCore, HerbGrammar, HerbSearch, HerbSpecification, HerbInterpret, Symbolics
+using HerbCore, HerbGrammar, HerbSearch, HerbSpecification, HerbInterpret
 include(joinpath(CEGIS_SRC, "CEGIS.jl"))
 
 """Verify a single program against a specification using Z3."""
