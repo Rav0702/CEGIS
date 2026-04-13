@@ -17,7 +17,6 @@ include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses Abs
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
-include("cegis_loop.jl")     # core loop — depends on all of the above
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
@@ -50,7 +49,6 @@ export
 
     # Main entry points
     run_cegis,
-    run_ioexample_cegis,
     run_synthesis,
     synth_with_oracle,
     build_grammar_from_spec,
