@@ -62,17 +62,19 @@ Factory for creating Z3 SMT solver-based oracles.
 struct Z3OracleFactory <: AbstractOracleFactory
     parser  :: Any  # CEXGeneration.AbstractCandidateParser
     mod     :: Module
+    use_direct_conversion :: Bool
     
     function Z3OracleFactory(;
         parser = nothing,
-        mod    :: Module = Main
+        mod    :: Module = Main,
+        use_direct_conversion :: Bool = false
     )
         if parser === nothing
             # Get default parser from CEXGeneration at runtime via Main
             cexgen = getfield(Main, :CEGIS) |> m -> getfield(m, :CEXGeneration)
             parser = cexgen.get_default_candidate_parser()
         end
-        new(parser, mod)
+        new(parser, mod, use_direct_conversion)
     end
 end
 
@@ -95,7 +97,8 @@ function create_oracle(factory::Z3OracleFactory, spec::Any, grammar::AbstractGra
             file_path,
             grammar;
             mod = factory.mod,
-            parser = factory.parser
+            parser = factory.parser,
+            use_direct_conversion = factory.use_direct_conversion
         )
     else
         error("create_oracle for Z3OracleFactory requires spec file path. " *

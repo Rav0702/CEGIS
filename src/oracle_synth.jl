@@ -68,7 +68,8 @@ function run_synthesis(
     max_time::Float64 = Inf,
     max_enumerations::Int = typemax(Int),
     mod::Module = Main,
-    eval_fn::Union{Function, Nothing} = nothing) :: CEGISResult
+    eval_fn::Union{Function, Nothing} = nothing,
+    use_direct_conversion::Bool = false) :: CEGISResult
     
     # Extract grammar from iterator
     grammar = HerbSearch.get_grammar(iterator)
@@ -76,7 +77,7 @@ function run_synthesis(
     
     # Create oracle from spec
     ensure_initialized!(problem, OracleFactories.create_oracle(
-        OracleFactories.Z3OracleFactory(),
+        OracleFactories.Z3OracleFactory(use_direct_conversion=use_direct_conversion),
         problem.spec !== nothing ? problem.spec : Parsers.parse_spec(problem.spec_parser, problem.spec_path),
         grammar
     ))
@@ -147,6 +148,7 @@ function synth_with_oracle(
     eval_fn::Union{Function, Nothing}=nothing
 )
     start_time = time()
+    termination_reason = "iterator_exhausted"
     problem = Problem(IOExample[])
     counterexamples = Counterexample[]
     global_best_program = nothing
@@ -182,10 +184,12 @@ function synth_with_oracle(
         
         if num_enum > max_enumerations
             println("[enum=$num_enum] Reached max_enumerations limit ($max_enumerations)")
+            termination_reason = "max_enumerations"
             break
         end
         
         if time() - start_time > max_time
+            println("[enum=$num_enum] STOP: timeout reached ($(round(time() - start_time, digits=3))s > max_time=$max_time)")
             return (result=CEGISResult(cegis_timeout, global_best_program, iter, counterexamples),
                     satisfied_examples=global_best_satisfied)
         end
@@ -242,6 +246,11 @@ function synth_with_oracle(
         println("[enum=$num_enum] Best program found: $(rulenode2expr(global_best_program, grammar)) (satisfied $global_best_satisfied examples)")
     else
         println("[enum=$num_enum] No candidate program found")
+    end
+    if termination_reason == "iterator_exhausted"
+        println("[enum=$num_enum] STOP: iterator exhausted (search space explored for current grammar/depth)")
+    elseif termination_reason == "max_enumerations"
+        println("[enum=$num_enum] STOP: max_enumerations limit hit before finding a fully verified solution")
     end
     
     (result=CEGISResult(cegis_failure, global_best_program, iter, counterexamples),
