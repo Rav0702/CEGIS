@@ -1,0 +1,6 @@
+Problem: conditional_sum
+Difficulty: medium
+Status: cegis_failure
+Iterations: 3
+Counterexamples: 3
+Solution: 0 - (x < y)

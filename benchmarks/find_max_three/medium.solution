@@ -1,0 +1,6 @@
+Problem: find_max_three
+Difficulty: medium
+Status: cegis_success
+Iterations: 18
+Counterexamples: 18
+Solution: ifelse(y < x, x, y)

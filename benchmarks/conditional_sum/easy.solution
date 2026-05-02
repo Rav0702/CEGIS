@@ -1,0 +1,6 @@
+Problem: conditional_sum
+Difficulty: easy
+Status: cegis_failure
+Iterations: 6
+Counterexamples: 6
+Solution: (x < x * x) * 10
