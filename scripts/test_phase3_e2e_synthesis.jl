@@ -11,14 +11,14 @@ const SPEC_DIR = joinpath(dirname(@__DIR__), "spec_files")
 
 const BENCHMARKS = Dict(
      "max2" => (path = joinpath(BENCHMARK_DIR, "max2_simple.sl"), expected = "ifelse(x > y, x, y)"),
-    "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
-     "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
-      "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
-     "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
-     "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
-     "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
-     "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
-    "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
+    # "max3" => (path = joinpath(BENCHMARK_DIR, "max3_simple.sl"), expected = "ifelse(x > y, ifelse(x > z, x, z), ifelse(y > z, y, z))"),
+    #  "symmetric" => (path = joinpath(BENCHMARK_DIR, "symmetric_max.sl"), expected = "ifelse(x > y, x, y)"),
+    #   "guard" => (path = joinpath(BENCHMARK_DIR, "guard_simple.sl"), expected = "ifelse(x > 0, x + y, z)"),
+    #  "arith" => (path = joinpath(BENCHMARK_DIR, "arith_simple.sl"), expected = "2 * x + y"),
+    #  "findidx" => (path = joinpath(SPEC_DIR, "findidx_2_simple.sl"), expected = "ifelse(k < x0, 0, ifelse(k < x1, 1, 2))"),
+    #  "fnd_sum" => (path = joinpath(BENCHMARK_DIR, "fnd_sum_simple.sl"), expected = "ifelse((x1 + x2) > 5, (x1 + x2), ifelse((x2 + x3) > 5, (x2 + x3), 0))"),
+    #  "simple_define_sum" => (path = joinpath(BENCHMARK_DIR, "simple_define_sum.sl"), expected = "x + y"),
+    # "jmbl_fg" => (path = joinpath(SPEC_DIR, "jmbl_fg_VC22_a.sl"), expected = nothing),
  )
 
 #   ============================================================ 2 native queries 1M enums

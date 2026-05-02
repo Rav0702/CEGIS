@@ -65,6 +65,12 @@ function verify_program(spec_file::String, program_str::String, program_name::St
         
         if result.status == :unsat
             println("\n✓ VERIFIED: Program satisfies all specification constraints!")
+            if !isempty(result.unsat_core)
+                println("\nUnsatisfiable Core (minimal constraints proving validity):")
+                for label in result.unsat_core
+                    println("  - $label")
+                end
+            end
             return (name=program_name, valid=true, error=nothing, z3_result=result)
         elseif result.status == :sat
             println("\n✗ COUNTEREXAMPLE: Program does NOT satisfy the specification")

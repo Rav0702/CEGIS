@@ -72,18 +72,13 @@ println("-"^70)
 spec_path = joinpath(CEGIS_ROOT, "spec_files", "phase3_benchmarks", "max2_simple.sl")
 CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCandidateParser())
 if isfile(spec_path)
-    # Create lightweight CEGISProblem (minimal constructor)
     cegis_problem = CEGIS.CEGISProblem(
         spec_path;
         desired_solution = "ifelse(x > y, x, y)"
     )
-    println("Problem: CEGISProblem from $spec_path")
-    println("Desired solution (for debugging): ifelse(x > y, x, y)")
     
-    # Build grammar externally (new API)
     cegis_grammar = CEGIS.build_grammar_from_spec(spec_path)
     
-    # Create iterator
     cegis_iterator = BFSIterator(
     solver = GenericSolver(cegis_grammar, :Expr; max_depth=5);
     max_depth = 5

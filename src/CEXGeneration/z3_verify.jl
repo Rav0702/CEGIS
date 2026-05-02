@@ -17,10 +17,12 @@ using Logging
 Result of Z3 verification.
 - status: :sat (counterexample found) or :unsat (valid)
 - model: Dict mapping variable names to values
+- unsat_core: Vector of assertion labels that form the unsatisfiable core (when UNSAT)
 """
 struct Z3Result
     status :: Symbol  # :sat or :unsat
     model  :: Dict{String, Any}
+    unsat_core :: Vector{String}
 end
 
 """
@@ -171,6 +173,54 @@ end
 _norm_key(s::String) = join(split(strip(s)), " ")
 
 """
+Parse the output of a z3 get-unsat-core call.
+
+Z3 prints the unsat core as a list of assertion labels:
+  (spec_max3_1 spec_max3_2 candidate_check)
+
+Followed by optional error messages. Returns a Vector{String} of the label names.
+"""
+function _parse_unsat_core(output::String)::Vector{String}
+    output = strip(output)
+    
+    # Remove comments
+    output = replace(output, r";[^\n]*" => "")
+    
+    # Extract the first complete S-expression (which is the core)
+    # Find matching parentheses for the first '('
+    if isempty(output) || !startswith(output, "(")
+        return String[]
+    end
+    
+    paren_depth = 0
+    end_pos = 0
+    
+    for (i, c) in enumerate(output)
+        if c == '('
+            paren_depth += 1
+        elseif c == ')'
+            paren_depth -= 1
+            if paren_depth == 0
+                end_pos = i
+                break
+            end
+        end
+    end
+    
+    if end_pos == 0
+        return String[]
+    end
+    
+    # Extract content between the matching parentheses
+    core_expr = strip(output[2:end_pos-1])
+    
+    # Split by whitespace and filter empty strings
+    labels = filter(!isempty, split(core_expr))
+    return labels
+end
+
+
+"""
 Verify an SMT-LIB2 query string using a single z3 subprocess call.
 
 Runs the complete query including check-sat and get-value in one call:
@@ -186,27 +236,38 @@ Single Z3 call handles both satisfiability check and model extraction.
 - `Z3Result` — Contains satisfiability status and model (if sat)
 """
 function verify_query(query::String)::Z3Result
-    # Run the full query (check-sat + get-value) in a single Z3 call
-    # Z3 will return "unsat" (ignoring get-value) or "sat" with model values
+    # Run the full query (check-sat + get-value + get-unsat-core) in a single Z3 call
+    # Z3 will return "unsat" with unsat core or "sat" with model values
     out = _z3_run(query)
 
     lines = [strip(line) for line in split(out, '\n') if !isempty(strip(line))]
     
-    isempty(lines) && return Z3Result(:unknown, Dict())
+    isempty(lines) && return Z3Result(:unknown, Dict(), String[])
     first_line = lines[1]
 
-    # Handle unsat: Z3 just returns "unsat" and ignores get-value calls
-    first_line == "unsat" && return Z3Result(:unsat, Dict())
-    first_line != "sat"   && return Z3Result(:unknown, Dict())
+    # Handle unsat: Z3 returns "unsat" followed by get-unsat-core output
+    if first_line == "unsat"
+        unsat_core = String[]
+        if length(lines) > 1
+            # Parse unsat core from remaining lines
+            core_str = join(lines[2:end], '\n')
+            unsat_core = _parse_unsat_core(core_str)
+        end
+        return Z3Result(:unsat, Dict(), unsat_core)
+    end
+    
+    if first_line != "sat"
+        return Z3Result(:unknown, Dict(), String[])
+    end
 
     # SAT: extract model from get-value output (lines after "sat")
     if length(lines) > 1
         model_str = join(lines[2:end], '\n')
         model = _parse_get_value_output(model_str)
-        return Z3Result(:sat, model)
+        return Z3Result(:sat, model, String[])
     end
 
-    return Z3Result(:sat, Dict())
+    return Z3Result(:sat, Dict(), String[])
 end
 
 """
@@ -236,6 +297,13 @@ function format_result(result::Z3Result, spec::Spec)::String
     elseif result.status == :unsat
         push!(lines, "VALID CANDIDATE")
         push!(lines, "The candidate satisfies all constraints.")
+        push!(lines, "")
+        if !isempty(result.unsat_core)
+            push!(lines, "Unsatisfiable Core (minimal constraints that imply validity):")
+            for label in result.unsat_core
+                push!(lines, "  - $label")
+            end
+        end
     elseif result.status == :unknown
         push!(lines, " UNKNOWN")
         push!(lines, "Z3 could not determine satisfiability.")
