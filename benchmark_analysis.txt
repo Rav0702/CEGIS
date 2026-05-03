@@ -1,0 +1,4072 @@
+Test Summary:              | Pass  Total  Time
+Benchmark Suite Validation |  162    162  0.1s
+  max_two problem          |   27     27  0.1s
+  abs_value problem        |   27     27  0.0s
+  conditional_sum problem  |   27     27  0.0s
+  find_max_three problem   |   27     27  0.0s
+  sign_function problem    |   27     27  0.0s
+  clamp_value problem      |   27     27  0.0s
+
+================================================================================
+RUNNING SYNTHESIS ON ALL BENCHMARKS (1M enumeration)
+================================================================================
+
+
+Problem: max_two
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int y)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 1
+    x => 1
+    (max2 x y) => 0
+    y => 0
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => 1), expected=1
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int x)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 0
+    x => -1
+    (max2 x y) => -1
+    y => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => -1), expected=0
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): y < x
+  Candidate (SMT): (< y x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int (ite (< y x) 1 0))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 0
+    x => 0
+    (max2 x y) => 1
+    y => -1
+[enum=13] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :x => 0), expected=0
+[iter=3] enum=13, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): 0 < x
+  Candidate (SMT): (< 0 x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int (ite (< 0 x) 1 0))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 2
+    x => 2
+    (max2 x y) => 1
+    y => 0
+[enum=29] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => 2), expected=2
+[iter=4] enum=29, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(y < x, x, y)
+  Candidate (SMT): (ite (< y x) x y)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int (ite (< y x) x y))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - candidate_check
+[enum=188] SUCCESS: Found candidate satisfying all examples!
+[enum=188] Candidate: ifelse(y < x, x, y)
+     Solution: ifelse(y < x, x, y)
+     Iterations: 4
+     Counterexamples: 4
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int y)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+(assert (! (=> (not (= x y)) (or (= out_max2 x) (= out_max2 y))) :named spec_max2_4))
+(assert (! (=> (= x y) (= out_max2 x)) :named spec_max2_5))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  (=> (not (= x y)) (or (= (max2 x y) x) (= (max2 x y) y)))
+  (=> (= x y) (= (max2 x y) x))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 0
+    x => 0
+    (max2 x y) => -1
+    y => -1
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :x => 0), expected=0
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int x)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+(assert (! (=> (not (= x y)) (or (= out_max2 x) (= out_max2 y))) :named spec_max2_4))
+(assert (! (=> (= x y) (= out_max2 x)) :named spec_max2_5))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  (=> (not (= x y)) (or (= (max2 x y) x) (= (max2 x y) y)))
+  (=> (= x y) (= (max2 x y) x))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => 0
+    x => -1
+    (max2 x y) => -1
+    y => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => -1), expected=0
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): 0
+  Candidate (SMT): 0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int 0)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+(assert (! (=> (not (= x y)) (or (= out_max2 x) (= out_max2 y))) :named spec_max2_4))
+(assert (! (=> (= x y) (= out_max2 x)) :named spec_max2_5))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  (=> (not (= x y)) (or (= (max2 x y) x) (= (max2 x y) y)))
+  (=> (= x y) (= (max2 x y) x))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_max2", "x", "(max2 x y)", "y"]
+    out_max2 => -1
+    x => -2
+    (max2 x y) => 0
+    y => -1
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :x => -2), expected=-1
+[iter=3] enum=3, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(y < x, x, y)
+  Candidate (SMT): (ite (< y x) x y)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int (ite (< y x) x y))
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+(assert (! (=> (not (= x y)) (or (= out_max2 x) (= out_max2 y))) :named spec_max2_4))
+(assert (! (=> (= x y) (= out_max2 x)) :named spec_max2_5))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  (=> (not (= x y)) (or (= (max2 x y) x) (= (max2 x y) y)))
+  (=> (= x y) (= (max2 x y) x))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - candidate_check
+[enum=188] SUCCESS: Found candidate satisfying all examples!
+[enum=188] Candidate: ifelse(y < x, x, y)
+     Solution: ifelse(y < x, x, y)
+     Iterations: 3
+     Counterexamples: 3
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun max2 ((x Int) (y Int)) Int y)
+
+(declare-const out_max2 Int)
+
+; Spec constraints for max2 (valid outputs: out_max2)
+(assert (! (>= out_max2 x) :named spec_max2_1))
+(assert (! (>= out_max2 y) :named spec_max2_2))
+(assert (! (or (= x out_max2) (= y out_max2)) :named spec_max2_3))
+(assert (! (=> (and (> x 0) (> y 0)) (and (>= out_max2 x) (>= out_max2 y))) :named spec_max2_4))
+(assert (! (=> (and (< x 0) (< y 0)) (>= out_max2 (+ (min x y) 1))) :named spec_max2_5))
+(assert (! (=> (and (<= x 0) (>= y 0)) (or (= out_max2 x) (= out_max2 y))) :named spec_max2_6))
+(assert (! (= out_max2 x) :named spec_max2_7))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max2 x y) x)
+  (>= (max2 x y) y)
+  (or (= x (max2 x y)) (= y (max2 x y)))
+  (=> (and (> x 0) (> y 0)) (and (>= (max2 x y) x) (>= (max2 x y) y)))
+  (=> (and (< x 0) (< y 0)) (>= (max2 x y) (+ (min x y) 1)))
+  (=> (and (<= x 0) (>= y 0)) (or (= (max2 x y) x) (= (max2 x y) y)))
+  (= (max2 x x) x)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((max2 x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max2))
+
+  [END Z3 QUERY]
+  [ERROR in verify_query]: ErrorException("Z3 failed with exit code 1:\n\nStdout: (error \"line 17 column 61: unknown constant min (Int Int) \")\r\n(error \"line 28 column 54: unknown constant min (Int Int) \")\r\nsat\r\n(error \"line 35 column 15: unsat core is not available\")\r\n((x 0)\r\n (y (- 1)))\r\n(((max2 x y) (- 1)))\r\n((out_max2 0))")
+  Z3 Status: unknown
+  [SKIPPED: Z3 had an error - likely type mismatch]
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: y
+     Solution: y
+     Iterations: 0
+     Counterexamples: 0
+
+
+Problem: abs_value
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int x)
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "(abs_val x)", "out_abs_val"]
+    x => -1
+    (abs_val x) => -1
+    out_abs_val => 1
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:x => -1), expected=1
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): 1
+  Candidate (SMT): 1
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int 1)
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "(abs_val x)", "out_abs_val"]
+    x => -2
+    (abs_val x) => 1
+    out_abs_val => 2
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:x => -2), expected=2
+[iter=2] enum=3, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): 0 - x
+  Candidate (SMT): (- 0 x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int (- 0 x))
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "(abs_val x)", "out_abs_val"]
+    x => 1
+    (abs_val x) => -1
+    out_abs_val => 1
+[enum=23] Oracle counterexample: input=Dict{Symbol, Any}(:x => 1), expected=1
+[iter=3] enum=23, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): 1 + (x < 0 - 1)
+  Candidate (SMT): (+ 1 (< x (- 0 1)))
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int (+ 1 (< x (- 0 1))))
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["x", "(abs_val x)", "out_abs_val"]
+    x => -3
+    (abs_val x) => 2
+    out_abs_val => 3
+[enum=5586] Oracle counterexample: input=Dict{Symbol, Any}(:x => -3), expected=3
+[iter=4] enum=5586, Added IO counterexample, spec size now=4
+[enum=10000] checking: 0 * (0 <= 1 + 0) | spec size=4
+[enum=20000] checking: ifelse(0 >= 1, 0, 0 > 1) | spec size=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(x < 0, 0 - x, x)
+  Candidate (SMT): (ite (< x 0) (- 0 x) x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int (ite (< x 0) (- 0 x) x))
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - candidate_check
+[enum=23630] SUCCESS: Found candidate satisfying all examples!
+[enum=23630] Candidate: ifelse(x < 0, 0 - x, x)
+     Solution: ifelse(x < 0, 0 - x, x)
+     Iterations: 4
+     Counterexamples: 4
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun abs_val ((x Int)) Int x)
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+(assert (! (= out_abs_val 0) :named spec_abs_val_4))
+(assert (! (= out_abs_val out_abs_val) :named spec_abs_val_5))
+(assert (! (or (= out_abs_val x) (= out_abs_val (- x))) :named spec_abs_val_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  (= (abs_val 0) 0)
+  (= (abs_val (abs_val x)) (abs_val x))
+  (or (= (abs_val x) x) (= (abs_val x) (- x)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((abs_val x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - spec_abs_val_3
+    - spec_abs_val_4
+    - candidate_check
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: x
+     Solution: x
+     Iterations: 0
+     Counterexamples: 0
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun abs_val ((x Int)) Int x)
+
+(declare-const out_abs_val Int)
+
+; Spec constraints for abs_val (valid outputs: out_abs_val)
+(assert (! (>= out_abs_val 0) :named spec_abs_val_1))
+(assert (! (=> (>= x 0) (= out_abs_val x)) :named spec_abs_val_2))
+(assert (! (=> (< x 0) (= out_abs_val (- x))) :named spec_abs_val_3))
+(assert (! (= out_abs_val 0) :named spec_abs_val_4))
+(assert (! (= out_abs_val out_abs_val) :named spec_abs_val_5))
+(assert (! (or (= out_abs_val x) (= out_abs_val (- x))) :named spec_abs_val_6))
+(assert (! (= out_abs_val out_abs_val) :named spec_abs_val_7))
+(assert (! (<= out_abs_val (+ out_abs_val out_abs_val)) :named spec_abs_val_8))
+(assert (! (=> (>= y 0) (= out_abs_val (* out_abs_val y))) :named spec_abs_val_9))
+(assert (! (=> (not (= x 0)) (> out_abs_val 0)) :named spec_abs_val_10))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (abs_val x) 0)
+  (=> (>= x 0) (= (abs_val x) x))
+  (=> (< x 0) (= (abs_val x) (- x)))
+  (= (abs_val 0) 0)
+  (= (abs_val (abs_val x)) (abs_val x))
+  (or (= (abs_val x) x) (= (abs_val x) (- x)))
+  (= (abs_val (- x)) (abs_val x))
+  (<= (abs_val (+ x y)) (+ (abs_val x) (abs_val y)))
+  (=> (>= y 0) (= (abs_val (* x y)) (* (abs_val x) y)))
+  (=> (not (= x 0)) (> (abs_val x) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((abs_val x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_abs_val))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - spec_abs_val_4
+    - spec_abs_val_10
+    - candidate_check
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: x
+     Solution: x
+     Iterations: 0
+     Counterexamples: 0
+
+
+Problem: conditional_sum
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int y)
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 10
+    x => -1
+    (cond_sum x y) => 11
+    y => 11
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => 11, :x => -1), expected=10
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): 10
+  Candidate (SMT): 10
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int 10)
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 0
+    x => 0
+    (cond_sum x y) => 10
+    y => 0
+[enum=5] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => 0), expected=0
+[iter=2] enum=5, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): y + x
+  Candidate (SMT): (+ y x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int (+ y x))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 0
+    x => 1
+    (cond_sum x y) => 1
+    y => 0
+[enum=7] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => 1), expected=0
+[iter=3] enum=7, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(y < 1, y, 10)
+  Candidate (SMT): (ite (< y 1) y 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int (ite (< y 1) y 10))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 0
+    x => 0
+    (cond_sum x y) => -1
+    y => -1
+[enum=346] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :x => 0), expected=0
+[iter=4] enum=346, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(y < 1, 0, 10)
+  Candidate (SMT): (ite (< y 1) 0 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int (ite (< y 1) 0 10))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 10
+    x => 10
+    (cond_sum x y) => 0
+    y => 0
+[enum=366] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :x => 10), expected=10
+[iter=5] enum=366, Added IO counterexample, spec size now=5
+[enum=10000] checking: (x < 0) - 1 | spec size=5
+[enum=20000] checking: (y < 0) < (0 >= x) | spec size=5
+[enum=30000] checking: (1 > 0) < (0 >= x) | spec size=5
+[enum=40000] checking: (x >= 0) < (0 >= x) | spec size=5
+[enum=50000] checking: (10 == 0) < (0 >= x) | spec size=5
+
+[ORACLE_CALL #6]
+  Candidate (Julia): (x < x * x) * 10
+  Candidate (SMT): (* (< x (* x x)) 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int (* (< x (* x x)) 10))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (>= (+ x y) 10) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (< (+ x y) 10) (= out_cond_sum 0)) :named spec_cond_sum_2))
+(assert (! (>= out_cond_sum 0) :named spec_cond_sum_3))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (>= (+ x y) 10) (= (cond_sum x y) (+ x y)))
+  (=> (< (+ x y) 10) (= (cond_sum x y) 0))
+  (>= (cond_sum x y) 0)
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y)", "y"]
+    out_cond_sum => 11
+    x => -1
+    (cond_sum x y) => 10
+    y => 12
+[enum=58153] Oracle counterexample: input=Dict{Symbol, Any}(:y => 12, :x => -1), expected=11
+[iter=6] enum=58153, Added IO counterexample, spec size now=6
+[enum=60000] checking: (0 > 0) > (0 >= x) | spec size=6
+[enum=70000] checking: (y >= 0) > (0 >= x) | spec size=6
+[enum=80000] checking: x + 10 * (x - 0) | spec size=6
+[enum=90000] checking: x - (x - (x + 0)) | spec size=6
+[enum=100000] checking: y * (0 * (x * 0)) | spec size=6
+[enum=110000] checking: ifelse(y < y, 0, y >= 10) | spec size=6
+[enum=120000] checking: ifelse(x < 1, 0, y >= 10) | spec size=6
+[enum=130000] checking: ifelse(1 < x, 0, y >= 10) | spec size=6
+[enum=140000] checking: ifelse(10 < 10, 0, y >= 10) | spec size=6
+[enum=150000] checking: ifelse(x > 0, 0, y >= 10) | spec size=6
+[enum=160000] checking: ifelse(1 > y, 0, y >= 10) | spec size=6
+[enum=170000] checking: ifelse(10 > 1, 0, y >= 10) | spec size=6
+[enum=180000] checking: (1 < 0) + (0 >= 10) | spec size=6
+[enum=190000] checking: (x <= 0) + (0 >= 10) | spec size=6
+[enum=200000] checking: (10 >= 0) + (0 >= 10) | spec size=6
+[enum=210000] checking: (0 < 0) - (0 >= 10) | spec size=6
+[enum=220000] checking: (y <= 0) - (0 >= 10) | spec size=6
+[enum=230000] checking: (1 >= 0) - (0 >= 10) | spec size=6
+[enum=240000] checking: (x < 0) * (0 >= 10) | spec size=6
+[enum=250000] checking: (10 > 0) * (0 >= 10) | spec size=6
+[enum=260000] checking: (0 >= 0) * (0 >= 10) | spec size=6
+[enum=270000] checking: x + (10 < 10 + 1) | spec size=6
+[enum=280000] checking: 1 + (y == 10 * 1) | spec size=6
+[enum=290000] checking: x - (0 <= 10 - 1) | spec size=6
+[enum=300000] checking: 10 - (10 < 10 + 1) | spec size=6
+[enum=310000] checking: x * (y == 10 * 1) | spec size=6
+[enum=320000] checking: 10 * (0 <= 10 - 1) | spec size=6
+[enum=330000] checking: y * 10 + (10 + 0) | spec size=6
+[enum=340000] checking: (10 - y) - 10 * 0 | spec size=6
+[enum=350000] checking: (0 - 0) * (10 - 0) | spec size=6
+[enum=360000] checking: ifelse(y < 1, 0 <= 1, 1) | spec size=6
+[enum=370000] checking: ifelse(0 < x, 0 <= 1, 1) | spec size=6
+[enum=380000] checking: ifelse(1 < 10, 0 <= 1, 1) | spec size=6
+[enum=390000] checking: ifelse(y > 0, 0 <= 10, x) | spec size=6
+[enum=400000] checking: ifelse(0 > y, 0 <= 10, x) | spec size=6
+[enum=410000] checking: ifelse(1 > 1, 0 <= 10, x) | spec size=6
+[enum=420000] checking: ifelse(y <= x, 1 <= y, y) | spec size=6
+[enum=430000] checking: ifelse(x <= 10, 1 <= y, y) | spec size=6
+[enum=440000] checking: ifelse(1 <= 0, 1 <= y, y) | spec size=6
+[enum=450000] checking: ifelse(y >= y, 1 <= y, y) | spec size=6
+[enum=460000] checking: ifelse(x >= 1, 1 <= y, y) | spec size=6
+[enum=470000] checking: ifelse(1 >= x, 1 <= y, y) | spec size=6
+[enum=480000] checking: ifelse(10 >= 10, 1 <= y, y) | spec size=6
+[enum=490000] checking: ifelse(x == 0, 1 <= y, y) | spec size=6
+[enum=500000] checking: ifelse(1 == y, 1 <= y, y) | spec size=6
+[enum=510000] checking: y + 1 * 0 < x | spec size=6
+[enum=520000] checking: 10 * (1 + 1) < x | spec size=6
+[enum=530000] checking: 0 * (1 - 1) > x | spec size=6
+[enum=540000] checking: y * (1 * 1) <= x | spec size=6
+[enum=550000] checking: 10 - (1 + 1) >= x | spec size=6
+[enum=560000] checking: 0 - (1 - 1) == x | spec size=6
+[enum=570000] checking: (y - 1 * 0) + 0 | spec size=6
+[enum=580000] checking: (10 + (1 + 0)) - 0 | spec size=6
+[enum=590000] checking: (0 + (1 - 0)) * 0 | spec size=6
+[enum=600000] checking: ((0 + 1) + x) + x | spec size=6
+[enum=610000] checking: (0 * 1) * x + x | spec size=6
+[enum=620000] checking: (0 - 1) * x - x | spec size=6
+[enum=630000] checking: ((0 + 1) * x) * x | spec size=6
+[enum=640000] checking: ifelse(0 < 0, 1, 0) == 1 | spec size=6
+[enum=650000] checking: ifelse(y <= 0, 1, 0) == 1 | spec size=6
+[enum=660000] checking: ifelse(1 >= 0, 1, 0) == 1 | spec size=6
+[enum=670000] checking: ifelse(x < 0, 1, x) + 1 | spec size=6
+[enum=680000] checking: ifelse(10 > 0, 1, x) + 1 | spec size=6
+[enum=690000] checking: y + 0 < (0 >= y) | spec size=6
+[enum=700000] checking: 1 - 0 < (0 >= y) | spec size=6
+[enum=710000] checking: x + 0 > (0 >= y) | spec size=6
+[enum=720000] checking: 10 - 0 > (0 >= y) | spec size=6
+[enum=730000] checking: 0 + 0 <= (0 >= y) | spec size=6
+[enum=740000] checking: y * 0 <= (0 >= y) | spec size=6
+[enum=750000] checking: 1 + 0 >= (0 >= y) | spec size=6
+[enum=760000] checking: x * 0 >= (0 >= y) | spec size=6
+[enum=770000] checking: 10 + 0 == (0 >= 10) | spec size=6
+[enum=780000] checking: 0 * 0 == (0 >= 10) | spec size=6
+[enum=790000] checking: x + ifelse(0 < 1, 0, 0) | spec size=6
+[enum=800000] checking: 0 + ifelse(0 >= 1, 0, 0) | spec size=6
+[enum=810000] checking: 10 + ifelse(0 > 1, 0, 0) | spec size=6
+[enum=820000] checking: y - ifelse(0 == 1, 0, 0) | spec size=6
+[enum=830000] checking: 0 - ifelse(0 <= 1, 0, 0) | spec size=6
+[enum=840000] checking: 10 - ifelse(0 < 1, 0, 0) | spec size=6
+[enum=850000] checking: y * ifelse(0 >= 1, 0, 0) | spec size=6
+[enum=860000] checking: 0 * ifelse(0 > 1, 0, 0) | spec size=6
+[enum=870000] checking: 1 * ifelse(0 == 1, 0, 0) | spec size=6
+[enum=880000] checking: ifelse(y < 10, x, y + 10) | spec size=6
+[enum=890000] checking: ifelse(1 < 0, 0, y * 10) | spec size=6
+[enum=900000] checking: ifelse(x > y, 10, y - 10) | spec size=6
+[enum=910000] checking: ifelse(1 > 10, x, y + 10) | spec size=6
+[enum=920000] checking: ifelse(x <= 0, 0, x * 0) | spec size=6
+[enum=930000] checking: ifelse(10 <= y, 10, x - 0) | spec size=6
+[enum=940000] checking: ifelse(x >= 10, x, x + 0) | spec size=6
+[enum=950000] checking: ifelse(10 >= 0, 0, x * 0) | spec size=6
+[enum=960000] checking: ifelse(0 == y, 10, x - 0) | spec size=6
+[enum=970000] checking: ifelse(10 == 10, x, x + 0) | spec size=6
+[enum=980000] checking: ifelse(10 > (0 == 1), 10, x) | spec size=6
+[enum=990000] checking: ifelse(x <= (0 <= 1), 10, x) | spec size=6
+[enum=1000000] checking: ifelse(1 <= (0 < 1), 10, x) | spec size=6
+[enum=1000001] Reached max_enumerations limit (1000000)
+[enum=1000001] Best program found: (x < x * x) * 10 (satisfied 5 examples)
+     Solution: (x < x * x) * 10
+     Iterations: 6
+     Counterexamples: 6
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun cond_sum ((x Int) (y Int)) Int y)
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (and (> x 0) (> y 0) (>= (+ x y) 15)) (= out_cond_sum (+ x y))) :named spec_cond_sum_1))
+(assert (! (=> (and (> x 0) (<= y 0) (>= x 7)) (= out_cond_sum x)) :named spec_cond_sum_2))
+(assert (! (=> (and (<= x 0) (> y 0) (>= y 7)) (= out_cond_sum y)) :named spec_cond_sum_3))
+(assert (! (=> (and (> x 0) (> y 0) (< (+ x y) 15)) (or (= out_cond_sum (max x y)) (= out_cond_sum (+ x y)))) :named spec_cond_sum_4))
+(assert (! (=> (or (and (> x 0) (<= y 0) (< x 7)) (and (<= x 0) (> y 0) (< y 7)) (and (<= x 0) (<= y 0))) (= out_cond_sum 0)) :named spec_cond_sum_5))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (and (> x 0) (> y 0) (>= (+ x y) 15)) (= (cond_sum x y) (+ x y)))
+  (=> (and (> x 0) (<= y 0) (>= x 7)) (= (cond_sum x y) x))
+  (=> (and (<= x 0) (> y 0) (>= y 7)) (= (cond_sum x y) y))
+  (=> (and (> x 0) (> y 0) (< (+ x y) 15)) (or (= (cond_sum x y) (max x y)) (= (cond_sum x y) (+ x y))))
+  (=> (or (and (> x 0) (<= y 0) (< x 7)) (and (<= x 0) (> y 0) (< y 7)) (and (<= x 0) (<= y 0))) (= (cond_sum x y) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((cond_sum x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  [ERROR in verify_query]: ErrorException("Z3 failed with exit code 1:\n\nStdout: (error \"line 16 column 80: unknown constant max (Int Int) \")\r\n(error \"line 25 column 73: unknown constant max (Int Int) \")\r\nsat\r\n(error \"line 31 column 15: unsat core is not available\")\r\n((x 1)\r\n (y 1))\r\n(((cond_sum x y) 1))\r\n((out_cond_sum 0))")
+  Z3 Status: unknown
+  [SKIPPED: Z3 had an error - likely type mismatch]
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: y
+     Solution: y
+     Iterations: 0
+     Counterexamples: 0
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun cond_sum ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= out_cond_sum (+ (+ x y) z))) :named spec_cond_sum_1))
+(assert (! (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= out_cond_sum (+ x y))) :named spec_cond_sum_2))
+(assert (! (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= out_cond_sum (+ x z))) :named spec_cond_sum_3))
+(assert (! (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= out_cond_sum (+ y z))) :named spec_cond_sum_4))
+(assert (! (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= out_cond_sum x)) :named spec_cond_sum_5))
+(assert (! (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= out_cond_sum y)) :named spec_cond_sum_6))
+(assert (! (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= out_cond_sum z)) :named spec_cond_sum_7))
+(assert (! (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= out_cond_sum 0)) :named spec_cond_sum_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= (cond_sum x y z) (+ (+ x y) z)))
+  (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= (cond_sum x y z) (+ x y)))
+  (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= (cond_sum x y z) (+ x z)))
+  (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= (cond_sum x y z) (+ y z)))
+  (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= (cond_sum x y z) x))
+  (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= (cond_sum x y z) y))
+  (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= (cond_sum x y z) z))
+  (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= (cond_sum x y z) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((cond_sum x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y z)", "z", "y"]
+    out_cond_sum => 0
+    x => -2
+    (cond_sum x y z) => -1
+    z => 1
+    y => -1
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => 1, :x => -2), expected=0
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): 0
+  Candidate (SMT): 0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun cond_sum ((x Int) (y Int) (z Int)) Int 0)
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= out_cond_sum (+ (+ x y) z))) :named spec_cond_sum_1))
+(assert (! (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= out_cond_sum (+ x y))) :named spec_cond_sum_2))
+(assert (! (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= out_cond_sum (+ x z))) :named spec_cond_sum_3))
+(assert (! (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= out_cond_sum (+ y z))) :named spec_cond_sum_4))
+(assert (! (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= out_cond_sum x)) :named spec_cond_sum_5))
+(assert (! (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= out_cond_sum y)) :named spec_cond_sum_6))
+(assert (! (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= out_cond_sum z)) :named spec_cond_sum_7))
+(assert (! (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= out_cond_sum 0)) :named spec_cond_sum_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= (cond_sum x y z) (+ (+ x y) z)))
+  (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= (cond_sum x y z) (+ x y)))
+  (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= (cond_sum x y z) (+ x z)))
+  (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= (cond_sum x y z) (+ y z)))
+  (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= (cond_sum x y z) x))
+  (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= (cond_sum x y z) y))
+  (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= (cond_sum x y z) z))
+  (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= (cond_sum x y z) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((cond_sum x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y z)", "z", "y"]
+    out_cond_sum => 22
+    x => -1
+    (cond_sum x y z) => 0
+    z => 22
+    y => -1
+[enum=4] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => 22, :x => -1), expected=22
+[iter=2] enum=4, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): ifelse(z < 10, 0, z)
+  Candidate (SMT): (ite (< z 10) 0 z)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun cond_sum ((x Int) (y Int) (z Int)) Int (ite (< z 10) 0 z))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= out_cond_sum (+ (+ x y) z))) :named spec_cond_sum_1))
+(assert (! (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= out_cond_sum (+ x y))) :named spec_cond_sum_2))
+(assert (! (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= out_cond_sum (+ x z))) :named spec_cond_sum_3))
+(assert (! (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= out_cond_sum (+ y z))) :named spec_cond_sum_4))
+(assert (! (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= out_cond_sum x)) :named spec_cond_sum_5))
+(assert (! (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= out_cond_sum y)) :named spec_cond_sum_6))
+(assert (! (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= out_cond_sum z)) :named spec_cond_sum_7))
+(assert (! (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= out_cond_sum 0)) :named spec_cond_sum_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= (cond_sum x y z) (+ (+ x y) z)))
+  (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= (cond_sum x y z) (+ x y)))
+  (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= (cond_sum x y z) (+ x z)))
+  (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= (cond_sum x y z) (+ y z)))
+  (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= (cond_sum x y z) x))
+  (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= (cond_sum x y z) y))
+  (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= (cond_sum x y z) z))
+  (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= (cond_sum x y z) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((cond_sum x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y z)", "z", "y"]
+    out_cond_sum => 0
+    x => 1
+    (cond_sum x y z) => 10
+    z => 10
+    y => -1
+[enum=2216] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => 10, :x => 1), expected=0
+[iter=3] enum=2216, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(z < 15, 0, z)
+  Candidate (SMT): (ite (< z 15) 0 z)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun cond_sum ((x Int) (y Int) (z Int)) Int (ite (< z 15) 0 z))
+
+(declare-const out_cond_sum Int)
+
+; Spec constraints for cond_sum (valid outputs: out_cond_sum)
+(assert (! (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= out_cond_sum (+ (+ x y) z))) :named spec_cond_sum_1))
+(assert (! (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= out_cond_sum (+ x y))) :named spec_cond_sum_2))
+(assert (! (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= out_cond_sum (+ x z))) :named spec_cond_sum_3))
+(assert (! (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= out_cond_sum (+ y z))) :named spec_cond_sum_4))
+(assert (! (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= out_cond_sum x)) :named spec_cond_sum_5))
+(assert (! (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= out_cond_sum y)) :named spec_cond_sum_6))
+(assert (! (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= out_cond_sum z)) :named spec_cond_sum_7))
+(assert (! (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= out_cond_sum 0)) :named spec_cond_sum_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (and (> x 0) (> y 0) (> z 0) (> (+ (+ x y) z) 20)) (= (cond_sum x y z) (+ (+ x y) z)))
+  (=> (and (> x 0) (> y 0) (<= z 0) (> (+ x y) 15)) (= (cond_sum x y z) (+ x y)))
+  (=> (and (> x 0) (<= y 0) (> z 0) (> (+ x z) 15)) (= (cond_sum x y z) (+ x z)))
+  (=> (and (<= x 0) (> y 0) (> z 0) (> (+ y z) 15)) (= (cond_sum x y z) (+ y z)))
+  (=> (and (> x 0) (<= y 0) (<= z 0) (>= x 10)) (= (cond_sum x y z) x))
+  (=> (and (<= x 0) (> y 0) (<= z 0) (>= y 10)) (= (cond_sum x y z) y))
+  (=> (and (<= x 0) (<= y 0) (> z 0) (>= z 10)) (= (cond_sum x y z) z))
+  (=> (or (<= (+ (+ x y) z) 0) (and (or (<= x 0) (<= y 0) (<= z 0)) (< (+ (+ x y) z) 20))) (= (cond_sum x y z) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((cond_sum x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_cond_sum))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_cond_sum", "x", "(cond_sum x y z)", "z", "y"]
+    out_cond_sum => 21
+    x => 1
+    (cond_sum x y z) => 0
+    z => 14
+    y => 6
+[enum=2344] Oracle counterexample: input=Dict{Symbol, Any}(:y => 6, :z => 14, :x => 1), expected=21
+[iter=4] enum=2344, Added IO counterexample, spec size now=4
+[enum=10000] checking: ifelse(z > x, z, 10) | spec size=4
+[enum=20000] checking: ifelse(0 <= y, 0, 15) | spec size=4
+[enum=30000] checking: 20 < (20 <= 10) | spec size=4
+[enum=40000] checking: 20 <= (y > 10) | spec size=4
+[enum=50000] checking: 15 * (20 + z) | spec size=4
+[enum=60000] checking: (1 == 15) + x | spec size=4
+[enum=70000] checking: (0 == 15) - 15 | spec size=4
+[enum=80000] checking: (x == 20) * x | spec size=4
+[enum=90000] checking: y + (z - (y + 0)) | spec size=4
+[enum=100000] checking: z + (0 - (z + 0)) | spec size=4
+[enum=110000] checking: x + (10 - (x + 0)) | spec size=4
+[enum=120000] checking: 0 + (20 - (0 + 0)) | spec size=4
+[enum=130000] checking: 1 + z * (1 + 0) | spec size=4
+[enum=140000] checking: 10 + 0 * (10 + 0) | spec size=4
+[enum=150000] checking: 15 + 10 * (15 + 0) | spec size=4
+[enum=160000] checking: 20 + 20 * (20 + 0) | spec size=4
+[enum=170000] checking: z - (z + (y - 0)) | spec size=4
+[enum=180000] checking: x - (0 + (z - 0)) | spec size=4
+[enum=190000] checking: 0 - (10 + (x - 0)) | spec size=4
+[enum=200000] checking: 1 - (20 + (0 - 0)) | spec size=4
+[enum=210000] checking: 10 - (z - (1 - 0)) | spec size=4
+[enum=220000] checking: 15 - (0 - (10 - 0)) | spec size=4
+[enum=230000] checking: 20 - (10 - (15 - 0)) | spec size=4
+[enum=240000] checking: y * (20 - (20 - 0)) | spec size=4
+[enum=250000] checking: z * (z * (y * 0)) | spec size=4
+[enum=260000] checking: x * (0 * (z * 0)) | spec size=4
+[enum=270000] checking: 0 * (10 * (x * 0)) | spec size=4
+[enum=280000] checking: 1 * (20 * (0 * 0)) | spec size=4
+[enum=290000] checking: 15 * (z + 1 * 0) | spec size=4
+[enum=300000] checking: 20 * (0 + 10 * 0) | spec size=4
+[enum=310000] checking: (y == z * 15) - 20 | spec size=4
+[enum=320000] checking: (0 == 20 * 20) - 20 | spec size=4
+[enum=330000] checking: (20 == 15 + y) - 20 | spec size=4
+[enum=340000] checking: (x < 1 - z) * 20 | spec size=4
+[enum=350000] checking: (10 < x * x) * 20 | spec size=4
+[enum=360000] checking: (z > y + 0) * 20 | spec size=4
+[enum=370000] checking: (1 > 15 + 1) * 20 | spec size=4
+[enum=380000] checking: (20 > 1 - 10) * 20 | spec size=4
+[enum=390000] checking: (x <= x * 15) * 20 | spec size=4
+[enum=400000] checking: (15 <= y + 20) * 20 | spec size=4
+[enum=410000] checking: (z >= 20 + y) * 20 | spec size=4
+[enum=420000] checking: (1 >= 10 - z) * 20 | spec size=4
+[enum=430000] checking: (20 >= 0 * x) * 20 | spec size=4
+[enum=440000] checking: (0 == z + 0) * 20 | spec size=4
+[enum=450000] checking: (15 == 20 + 1) * 20 | spec size=4
+[enum=460000] checking: (y < 20) + (10 <= 15) | spec size=4
+[enum=470000] checking: (x < 20) + (15 < 15) | spec size=4
+[enum=480000] checking: (1 < 15) + (20 >= 15) | spec size=4
+[enum=490000] checking: (15 < 15) + (y <= 15) | spec size=4
+[enum=500000] checking: (y > 15) + (z < 15) | spec size=4
+[enum=510000] checking: (x > 10) + (x >= 15) | spec size=4
+[enum=520000] checking: (1 > 10) + (0 > 15) | spec size=4
+[enum=530000] checking: (15 > 1) + (1 == 15) | spec size=4
+[enum=540000] checking: (y <= 1) + (10 <= 15) | spec size=4
+[enum=550000] checking: (x <= 1) + (15 < 15) | spec size=4
+[enum=560000] checking: (1 <= 0) + (20 >= 15) | spec size=4
+[enum=570000] checking: (15 <= 0) + (y <= 15) | spec size=4
+[enum=580000] checking: (y >= 0) + (z < 15) | spec size=4
+[enum=590000] checking: (x >= x) + (x >= 15) | spec size=4
+[enum=600000] checking: (1 >= x) + (0 > 15) | spec size=4
+[enum=610000] checking: (15 >= z) + (1 == 15) | spec size=4
+[enum=620000] checking: (y == z) + (10 <= 15) | spec size=4
+[enum=630000] checking: (x == z) + (15 < 15) | spec size=4
+[enum=640000] checking: (1 == y) + (20 >= 15) | spec size=4
+[enum=650000] checking: (15 == y) + (y <= 15) | spec size=4
+[enum=660000] checking: (y < y) - (z < 15) | spec size=4
+[enum=670000] checking: (z < 20) - (x >= 15) | spec size=4
+[enum=680000] checking: (0 < 20) - (1 > 15) | spec size=4
+[enum=690000] checking: (10 < 15) - (10 == 15) | spec size=4
+[enum=700000] checking: (20 < 15) - (15 <= 15) | spec size=4
+[enum=710000] checking: (z > 15) - (20 < 15) | spec size=4
+[enum=720000] checking: (0 > 10) - (y == 15) | spec size=4
+[enum=730000] checking: (10 > 10) - (z <= 15) | spec size=4
+[enum=740000] checking: (20 > 10) - (x < 15) | spec size=4
+[enum=750000] checking: (z <= 1) - (0 >= 15) | spec size=4
+[enum=760000] checking: (0 <= 1) - (1 > 15) | spec size=4
+[enum=770000] checking: (10 <= 0) - (10 == 15) | spec size=4
+[enum=780000] checking: (20 <= 0) - (15 <= 15) | spec size=4
+[enum=790000] checking: (z >= 0) - (20 < 15) | spec size=4
+[enum=800000] checking: (0 >= x) - (y == 15) | spec size=4
+[enum=810000] checking: (10 >= x) - (z <= 15) | spec size=4
+[enum=820000] checking: (20 >= x) - (x < 15) | spec size=4
+[enum=830000] checking: (z == z) - (0 >= 15) | spec size=4
+[enum=840000] checking: (0 == z) - (1 > 15) | spec size=4
+[enum=850000] checking: (10 == y) - (10 == 15) | spec size=4
+[enum=860000] checking: (20 == y) - (15 <= 15) | spec size=4
+[enum=870000] checking: (z < y) * (20 < 15) | spec size=4
+[enum=880000] checking: (x < 20) * (y == 15) | spec size=4
+[enum=890000] checking: (1 < 20) * (z <= 15) | spec size=4
+[enum=900000] checking: (15 < 20) * (x < 15) | spec size=4
+[enum=910000] checking: (y > 15) * (0 >= 15) | spec size=4
+[enum=920000] checking: (x > 15) * (1 > 15) | spec size=4
+[enum=930000] checking: (1 > 10) * (10 == 15) | spec size=4
+[enum=940000] checking: (15 > 10) * (15 <= 15) | spec size=4
+[enum=950000] checking: (y <= 10) * (20 < 15) | spec size=4
+[enum=960000] checking: (x <= 1) * (y == 15) | spec size=4
+[enum=970000] checking: (1 <= 1) * (z <= 15) | spec size=4
+[enum=980000] checking: (15 <= 1) * (x < 15) | spec size=4
+[enum=990000] checking: (y >= 0) * (0 >= 15) | spec size=4
+[enum=1000000] checking: (x >= 0) * (1 > 15) | spec size=4
+[enum=1000001] Reached max_enumerations limit (1000000)
+[enum=1000001] Best program found: ifelse(z < 15, 0, z) (satisfied 3 examples)
+     Solution: ifelse(z < 15, 0, z)
+     Iterations: 4
+     Counterexamples: 4
+
+
+Problem: find_max_three
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => -2
+    x => 0
+    out_max3 => 0
+    z => -1
+    y => -2
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:y => -2, :z => -1, :x => 0), expected=0
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int x)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => -2
+    x => -2
+    out_max3 => 0
+    z => -1
+    y => 0
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:y => 0, :z => -1, :x => -2), expected=0
+[iter=2] enum=3, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): 0
+  Candidate (SMT): 0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int 0)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => 0
+    x => -1
+    out_max3 => -1
+    z => -2
+    y => -2
+[enum=4] Oracle counterexample: input=Dict{Symbol, Any}(:y => -2, :z => -2, :x => -1), expected=-1
+[iter=3] enum=4, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): z + 1
+  Candidate (SMT): (+ z 1)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int (+ z 1))
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => 1
+    x => -1
+    out_max3 => 0
+    z => 0
+    y => -1
+[enum=19] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => 0, :x => -1), expected=0
+[iter=4] enum=19, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(y < x, x, 0)
+  Candidate (SMT): (ite (< y x) x 0)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int (ite (< y x) x 0))
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => 0
+    x => -2
+    out_max3 => -1
+    z => -2
+    y => -1
+[enum=314] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => -2, :x => -2), expected=-1
+[iter=5] enum=314, Added IO counterexample, spec size now=5
+
+[ORACLE_CALL #6]
+  Candidate (Julia): z + (z < 0)
+  Candidate (SMT): (+ z (< z 0))
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int (+ z (< z 0)))
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => 0
+    x => -2
+    out_max3 => -1
+    z => -1
+    y => -2
+[enum=491] Oracle counterexample: input=Dict{Symbol, Any}(:y => -2, :z => -1, :x => -2), expected=-1
+[iter=6] enum=491, Added IO counterexample, spec size now=6
+[enum=10000] checking: (z < x) - 0 | spec size=6
+[enum=20000] checking: (y < x) < (x >= z) | spec size=6
+[enum=30000] checking: (0 > x) < (x >= z) | spec size=6
+[enum=40000] checking: (z >= x) < (x >= z) | spec size=6
+[enum=50000] checking: (1 == x) < (x >= z) | spec size=6
+
+[ORACLE_CALL #7]
+  Candidate (Julia): (1 >= y * x) - 1
+  Candidate (SMT): (- (>= 1 (* y x)) 1)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int (- (>= 1 (* y x)) 1))
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(max3 x y z)", "x", "out_max3", "z", "y"]
+    (max3 x y z) => 0
+    x => -1
+    out_max3 => -1
+    z => -2
+    y => -1
+[enum=52863] Oracle counterexample: input=Dict{Symbol, Any}(:y => -1, :z => -2, :x => -1), expected=-1
+[iter=7] enum=52863, Added IO counterexample, spec size now=7
+[enum=60000] checking: (x > x) > (x >= z) | spec size=7
+[enum=70000] checking: (y >= x) > (x >= z) | spec size=7
+[enum=80000] checking: z + 1 * (z - x) | spec size=7
+[enum=90000] checking: z - (z - (z + x)) | spec size=7
+[enum=100000] checking: y * (x * (z * x)) | spec size=7
+[enum=110000] checking: ifelse(y < y, x, y >= 1) | spec size=7
+[enum=120000] checking: ifelse(z < 0, x, y >= 1) | spec size=7
+[enum=130000] checking: ifelse(0 < z, x, y >= 1) | spec size=7
+[enum=140000] checking: ifelse(1 < 1, x, y >= 1) | spec size=7
+[enum=150000] checking: ifelse(z > x, x, y >= 1) | spec size=7
+[enum=160000] checking: ifelse(0 > y, x, y >= 1) | spec size=7
+[enum=170000] checking: ifelse(1 > 0, x, y >= 1) | spec size=7
+[enum=180000] checking: (0 < x) + (x >= 1) | spec size=7
+[enum=190000] checking: (z <= x) + (x >= 1) | spec size=7
+[enum=200000] checking: (1 >= x) + (x >= 1) | spec size=7
+[enum=210000] checking: (x < x) - (x >= 1) | spec size=7
+[enum=220000] checking: (y <= x) - (x >= 1) | spec size=7
+[enum=230000] checking: (0 >= x) - (x >= 1) | spec size=7
+[enum=240000] checking: (z < x) * (x >= 1) | spec size=7
+[enum=250000] checking: (1 > x) * (x >= 1) | spec size=7
+[enum=260000] checking: (x >= x) * (x >= 1) | spec size=7
+[enum=270000] checking: z + (1 < 1 + 0) | spec size=7
+[enum=280000] checking: 0 + (y == 1 * 0) | spec size=7
+[enum=290000] checking: z - (x <= 1 - 0) | spec size=7
+[enum=300000] checking: 1 - (1 < 1 + 0) | spec size=7
+[enum=310000] checking: z * (y == 1 * 0) | spec size=7
+[enum=320000] checking: 1 * (x <= 1 - 0) | spec size=7
+[enum=330000] checking: y * 1 + (1 + x) | spec size=7
+[enum=340000] checking: (1 - y) - 1x | spec size=7
+[enum=350000] checking: (x - x) * (1 - x) | spec size=7
+[enum=360000] checking: ifelse(y < 0, x <= 0, 0) | spec size=7
+[enum=370000] checking: ifelse(x < z, x <= 0, 0) | spec size=7
+[enum=380000] checking: ifelse(0 < 1, x <= 0, 0) | spec size=7
+[enum=390000] checking: ifelse(y > x, x <= 1, z) | spec size=7
+[enum=400000] checking: ifelse(x > y, x <= 1, z) | spec size=7
+[enum=410000] checking: ifelse(0 > 0, x <= 1, z) | spec size=7
+[enum=420000] checking: ifelse(y <= z, 0 <= y, y) | spec size=7
+[enum=430000] checking: ifelse(z <= 1, 0 <= y, y) | spec size=7
+[enum=440000] checking: ifelse(0 <= x, 0 <= y, y) | spec size=7
+[enum=450000] checking: ifelse(y >= y, 0 <= y, y) | spec size=7
+[enum=460000] checking: ifelse(z >= 0, 0 <= y, y) | spec size=7
+[enum=470000] checking: ifelse(0 >= z, 0 <= y, y) | spec size=7
+[enum=480000] checking: ifelse(1 >= 1, 0 <= y, y) | spec size=7
+[enum=490000] checking: ifelse(z == x, 0 <= y, y) | spec size=7
+[enum=500000] checking: ifelse(0 == y, 0 <= y, y) | spec size=7
+[enum=510000] checking: y + 0 * x < z | spec size=7
+[enum=520000] checking: 1 * (0 + 0) < z | spec size=7
+[enum=530000] checking: x * (0 - 0) > z | spec size=7
+[enum=540000] checking: y * (0 * 0) <= z | spec size=7
+[enum=550000] checking: 1 - (0 + 0) >= z | spec size=7
+[enum=560000] checking: x - (0 - 0) == z | spec size=7
+[enum=570000] checking: (y - 0 * x) + x | spec size=7
+[enum=580000] checking: (1 + (0 + x)) - x | spec size=7
+[enum=590000] checking: (x + (0 - x)) * x | spec size=7
+[enum=600000] checking: ((x + 0) + z) + z | spec size=7
+[enum=610000] checking: (x * 0) * z + z | spec size=7
+[enum=620000] checking: (x - 0) * z - z | spec size=7
+[enum=630000] checking: ((x + 0) * z) * z | spec size=7
+[enum=640000] checking: ifelse(x < x, 0, x) == 0 | spec size=7
+[enum=650000] checking: ifelse(y <= x, 0, x) == 0 | spec size=7
+[enum=660000] checking: ifelse(0 >= x, 0, x) == 0 | spec size=7
+[enum=670000] checking: ifelse(z < x, 0, z) + 0 | spec size=7
+[enum=680000] checking: ifelse(1 > x, 0, z) + 0 | spec size=7
+[enum=690000] checking: y + x < (x >= y) | spec size=7
+[enum=700000] checking: 0 - x < (x >= y) | spec size=7
+[enum=710000] checking: z + x > (x >= y) | spec size=7
+[enum=720000] checking: 1 - x > (x >= y) | spec size=7
+[enum=730000] checking: x + x <= (x >= y) | spec size=7
+[enum=740000] checking: y * x <= (x >= y) | spec size=7
+[enum=750000] checking: 0 + x >= (x >= y) | spec size=7
+[enum=760000] checking: z * x >= (x >= y) | spec size=7
+[enum=770000] checking: 1 + x == (x >= 1) | spec size=7
+[enum=780000] checking: x * x == (x >= 1) | spec size=7
+[enum=790000] checking: z + ifelse(x < 0, x, x) | spec size=7
+[enum=800000] checking: x + ifelse(x >= 0, x, x) | spec size=7
+[enum=810000] checking: 1 + ifelse(x > 0, x, x) | spec size=7
+[enum=820000] checking: y - ifelse(x == 0, x, x) | spec size=7
+[enum=830000] checking: x - ifelse(x <= 0, x, x) | spec size=7
+[enum=840000] checking: 1 - ifelse(x < 0, x, x) | spec size=7
+[enum=850000] checking: y * ifelse(x >= 0, x, x) | spec size=7
+[enum=860000] checking: x * ifelse(x > 0, x, x) | spec size=7
+[enum=870000] checking: 0 * ifelse(x == 0, x, x) | spec size=7
+[enum=880000] checking: ifelse(y < 1, z, y + 1) | spec size=7
+[enum=890000] checking: ifelse(0 < x, x, y * 1) | spec size=7
+[enum=900000] checking: ifelse(z > y, 1, y - 1) | spec size=7
+[enum=910000] checking: ifelse(0 > 1, z, y + 1) | spec size=7
+[enum=920000] checking: ifelse(z <= x, x, z * x) | spec size=7
+[enum=930000] checking: ifelse(1 <= y, 1, z - x) | spec size=7
+[enum=940000] checking: ifelse(z >= 1, z, z + x) | spec size=7
+[enum=950000] checking: ifelse(1 >= x, x, z * x) | spec size=7
+[enum=960000] checking: ifelse(x == y, 1, z - x) | spec size=7
+[enum=970000] checking: ifelse(1 == 1, z, z + x) | spec size=7
+[enum=980000] checking: ifelse(1 > (x == 0), 1, z) | spec size=7
+[enum=990000] checking: ifelse(z <= (x <= 0), 1, z) | spec size=7
+[enum=1000000] checking: ifelse(0 <= (x < 0), 1, z) | spec size=7
+[enum=1000001] Reached max_enumerations limit (1000000)
+[enum=1000001] Best program found: (1 >= y * x) - 1 (satisfied 6 examples)
+     Solution: (1 >= y * x) - 1
+     Iterations: 7
+     Counterexamples: 7
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+(assert (! (= out_max3 x) :named spec_max3_5))
+(assert (! (= out_max3 out_max3) :named spec_max3_6))
+(assert (! (= out_max3 out_max3) :named spec_max3_7))
+(assert (! (>= out_max3 (max x y)) :named spec_max3_8))
+(assert (! (>= out_max3 (max y z)) :named spec_max3_9))
+(assert (! (>= out_max3 (max x z)) :named spec_max3_10))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  (= (max3 x x x) x)
+  (= (max3 x y z) (max3 y x z))
+  (= (max3 x y z) (max3 x z y))
+  (>= (max3 x y z) (max x y))
+  (>= (max3 x y z) (max y z))
+  (>= (max3 x y z) (max x z))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((max3 x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  [ERROR in verify_query]: ErrorException("Z3 failed with exit code 1:\n\nStdout: (error \"line 21 column 32: unknown constant max (Int Int) \")\r\n(error \"line 22 column 32: unknown constant max (Int Int) \")\r\n(error \"line 23 column 32: unknown constant max (Int Int) \")\r\n(error \"line 35 column 27: unknown constant max (Int Int) \")\r\nsat\r\n(error \"line 42 column 15: unsat core is not available\")\r\n((x 0)\r\n (y (- 1))\r\n (z (- 1)))\r\n(((max3 x y z) (- 1)))\r\n((out_max3 0))")
+  Z3 Status: unknown
+  [SKIPPED: Z3 had an error - likely type mismatch]
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: y
+     Solution: y
+     Iterations: 0
+     Counterexamples: 0
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): y
+  Candidate (SMT): y
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+(declare-const w Int)
+
+(define-fun max3 ((x Int) (y Int) (z Int)) Int y)
+
+(declare-const out_max3 Int)
+
+; Spec constraints for max3 (valid outputs: out_max3)
+(assert (! (>= out_max3 x) :named spec_max3_1))
+(assert (! (>= out_max3 y) :named spec_max3_2))
+(assert (! (>= out_max3 z) :named spec_max3_3))
+(assert (! (or (= x out_max3) (or (= y out_max3) (= z out_max3))) :named spec_max3_4))
+(assert (! (= out_max3 x) :named spec_max3_5))
+(assert (! (= out_max3 out_max3) :named spec_max3_6))
+(assert (! (= out_max3 out_max3) :named spec_max3_7))
+(assert (! (>= out_max3 (max x y)) :named spec_max3_8))
+(assert (! (>= out_max3 (max y z)) :named spec_max3_9))
+(assert (! (>= out_max3 (max x z)) :named spec_max3_10))
+(assert (! (=> (and (<= x y) (<= y z)) (= out_max3 z)) :named spec_max3_11))
+(assert (! (=> (and (<= z y) (<= y x)) (= out_max3 x)) :named spec_max3_12))
+(assert (! (=> (and (<= x y) (<= y z)) (= out_max3 z)) :named spec_max3_13))
+(assert (! (=> (and (<= z y) (<= y x)) (= out_max3 x)) :named spec_max3_14))
+(assert (! (=> (and (<= x w) (= w (+ x 1))) (<= out_max3 out_max3)) :named spec_max3_15))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (>= (max3 x y z) x)
+  (>= (max3 x y z) y)
+  (>= (max3 x y z) z)
+  (or (= x (max3 x y z)) (or (= y (max3 x y z)) (= z (max3 x y z))))
+  (= (max3 x x x) x)
+  (= (max3 x y z) (max3 y x z))
+  (= (max3 x y z) (max3 x z y))
+  (>= (max3 x y z) (max x y))
+  (>= (max3 x y z) (max y z))
+  (>= (max3 x y z) (max x z))
+  (=> (and (<= x y) (<= y z)) (= (max3 x y z) z))
+  (=> (and (<= z y) (<= y x)) (= (max3 x y z) x))
+  (=> (and (<= x y) (<= y z)) (= (max3 x y z) z))
+  (=> (and (<= z y) (<= y x)) (= (max3 x y z) x))
+  (=> (and (<= x w) (= w (+ x 1))) (<= (max3 x y z) (max3 w y z)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z w))
+
+; Candidate output(s)
+(get-value ((max3 x y z w)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_max3))
+
+  [END Z3 QUERY]
+  [ERROR in verify_query]: ErrorException("Z3 failed with exit code 1:\n\nStdout: (error \"line 22 column 32: unknown constant max (Int Int) \")\r\n(error \"line 23 column 32: unknown constant max (Int Int) \")\r\n(error \"line 24 column 32: unknown constant max (Int Int) \")\r\n(error \"line 41 column 27: unknown constant max (Int Int) \")\r\nsat\r\n(error \"line 53 column 15: unsat core is not available\")\r\n((x 0)\r\n (y (- 1))\r\n (z 0)\r\n (w 0))\r\n(error \"line 59 column 26: unknown constant max3 (Int Int Int Int) \r\ndeclared: (declare-fun max3 (Int Int Int) Int) \")\r\n((out_max3 0))")
+  Z3 Status: unknown
+  [SKIPPED: Z3 had an error - likely type mismatch]
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: y
+     Solution: y
+     Iterations: 0
+     Counterexamples: 0
+
+
+Problem: sign_function
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun sign ((x Int)) Int x)
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((sign x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_sign", "x", "(sign x)"]
+    out_sign => 1
+    x => 2
+    (sign x) => 2
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:x => 2), expected=1
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): 1
+  Candidate (SMT): 1
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun sign ((x Int)) Int 1)
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((sign x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_sign", "x", "(sign x)"]
+    out_sign => 0
+    x => 0
+    (sign x) => 1
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:x => 0), expected=0
+[iter=2] enum=3, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): 0 < x
+  Candidate (SMT): (< 0 x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun sign ((x Int)) Int (ite (< 0 x) 1 0))
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((sign x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_sign", "x", "(sign x)"]
+    out_sign => -1
+    x => -1
+    (sign x) => 0
+[enum=16] Oracle counterexample: input=Dict{Symbol, Any}(:x => -1), expected=-1
+[iter=3] enum=16, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(x < 1, x, 1)
+  Candidate (SMT): (ite (< x 1) x 1)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun sign ((x Int)) Int (ite (< x 1) x 1))
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((sign x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["out_sign", "x", "(sign x)"]
+    out_sign => -1
+    x => -2
+    (sign x) => -2
+[enum=101] Oracle counterexample: input=Dict{Symbol, Any}(:x => -2), expected=-1
+[iter=4] enum=101, Added IO counterexample, spec size now=4
+[enum=10000] checking: 0 * (0 <= 1 + 0) | spec size=4
+[enum=20000] checking: ifelse(0 >= 1, 0, 0 > 1) | spec size=4
+[enum=30000] checking: ifelse(0 == 0, x * 1, 1) | spec size=4
+[enum=40000] checking: x + (x - 1 >= x) | spec size=4
+[enum=50000] checking: (0 * 0) * 1 > 0 | spec size=4
+[enum=60000] checking: (1 - 0) - (1 > x) | spec size=4
+[enum=70000] checking: ((1 > 0) - 0) * x | spec size=4
+[enum=80000] checking: 1 > ifelse(0 <= 1, 0, x) | spec size=4
+[enum=90000] checking: 1 * (x >= x) + x | spec size=4
+[enum=100000] checking: ifelse(x <= (x > x), 0, 0) | spec size=4
+[enum=110000] checking: 1 * (0 * x) > x | spec size=4
+[enum=120000] checking: (x < x) < 1 * 0 | spec size=4
+[enum=130000] checking: 0 + ((0 >= 1) + 0) | spec size=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): (0 < x) - (x < 0)
+  Candidate (SMT): (- (< 0 x) (< x 0))
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun sign ((x Int)) Int (- (< 0 x) (< x 0)))
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((sign x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - candidate_check
+[enum=136411] SUCCESS: Found candidate satisfying all examples!
+[enum=136411] Candidate: (0 < x) - (x < 0)
+     Solution: (0 < x) - (x < 0)
+     Iterations: 4
+     Counterexamples: 4
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+
+(define-fun sign ((x Int)) Int x)
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+(assert (! (= out_sign 0) :named spec_sign_5))
+(assert (! (=> (not (= x 0)) (= out_sign (- out_sign))) :named spec_sign_6))
+(assert (! (=> (> x 0) (> out_sign 0)) :named spec_sign_7))
+(assert (! (=> (< x 0) (< out_sign 0)) :named spec_sign_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  (= (sign 0) 0)
+  (=> (not (= x 0)) (= (sign (- x)) (- (sign x))))
+  (=> (> x 0) (> (sign x) 0))
+  (=> (< x 0) (< (sign x) 0))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y))
+
+; Candidate output(s)
+(get-value ((sign x y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - spec_sign_5
+    - spec_sign_7
+    - spec_sign_8
+    - candidate_check
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: x
+     Solution: x
+     Iterations: 0
+     Counterexamples: 0
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+
+(define-fun sign ((x Int)) Int x)
+
+(declare-const out_sign Int)
+
+; Spec constraints for sign (valid outputs: out_sign)
+(assert (! (=> (> x 0) (= out_sign 1)) :named spec_sign_1))
+(assert (! (=> (= x 0) (= out_sign 0)) :named spec_sign_2))
+(assert (! (=> (< x 0) (= out_sign (- 1))) :named spec_sign_3))
+(assert (! (or (= out_sign (- 1)) (or (= out_sign 0) (= out_sign 1))) :named spec_sign_4))
+(assert (! (= out_sign out_sign) :named spec_sign_5))
+(assert (! (=> (not (= x 0)) (= out_sign (- out_sign))) :named spec_sign_6))
+(assert (! (=> (not (= x 0)) (= (- out_sign) out_sign)) :named spec_sign_7))
+(assert (! (=> (= x (- 1)) (> out_sign out_sign)) :named spec_sign_8))
+(assert (! (=> (and (not (= x 0)) (not (= y 0))) (= out_sign (* out_sign out_sign))) :named spec_sign_9))
+(assert (! (and (<= out_sign 1) (>= out_sign (- 1))) :named spec_sign_10))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (> x 0) (= (sign x) 1))
+  (=> (= x 0) (= (sign x) 0))
+  (=> (< x 0) (= (sign x) (- 1)))
+  (or (= (sign x) (- 1)) (or (= (sign x) 0) (= (sign x) 1)))
+  (= (sign (sign x)) (sign x))
+  (=> (not (= x 0)) (= (sign (- x)) (- (sign x))))
+  (=> (not (= x 0)) (= (- (sign x)) (sign (- x))))
+  (=> (= x (- 1)) (> (sign (+ x 1)) (sign x)))
+  (=> (and (not (= x 0)) (not (= y 0))) (= (sign (* x y)) (* (sign x) (sign y))))
+  (and (<= (sign x) 1) (>= (sign x) (- 1)))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x y z))
+
+; Candidate output(s)
+(get-value ((sign x y z)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_sign))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - spec_sign_1
+    - spec_sign_3
+    - spec_sign_6
+    - candidate_check
+[enum=1] SUCCESS: Found candidate satisfying all examples!
+[enum=1] Candidate: x
+     Solution: x
+     Iterations: 0
+     Counterexamples: 0
+
+
+Problem: clamp_value
+
+
+  [easy]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun clamp ((x Int)) Int x)
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x 0) (= out_clamp 0)) :named spec_clamp_1))
+(assert (! (=> (> x 10) (= out_clamp 10)) :named spec_clamp_2))
+(assert (! (=> (and (>= x 0) (<= x 10)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp 0) (<= out_clamp 10)) :named spec_clamp_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x 0) (= (clamp x) 0))
+  (=> (> x 10) (= (clamp x) 10))
+  (=> (and (>= x 0) (<= x 10)) (= (clamp x) x))
+  (and (>= (clamp x) 0) (<= (clamp x) 10))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((clamp x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(clamp x)", "x", "out_clamp"]
+    (clamp x) => 11
+    x => 11
+    out_clamp => 10
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:x => 11), expected=10
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): 10
+  Candidate (SMT): 10
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun clamp ((x Int)) Int 10)
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x 0) (= out_clamp 0)) :named spec_clamp_1))
+(assert (! (=> (> x 10) (= out_clamp 10)) :named spec_clamp_2))
+(assert (! (=> (and (>= x 0) (<= x 10)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp 0) (<= out_clamp 10)) :named spec_clamp_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x 0) (= (clamp x) 0))
+  (=> (> x 10) (= (clamp x) 10))
+  (=> (and (>= x 0) (<= x 10)) (= (clamp x) x))
+  (and (>= (clamp x) 0) (<= (clamp x) 10))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((clamp x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(clamp x)", "x", "out_clamp"]
+    (clamp x) => 10
+    x => 0
+    out_clamp => 0
+[enum=4] Oracle counterexample: input=Dict{Symbol, Any}(:x => 0), expected=0
+[iter=2] enum=4, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): ifelse(x < 1, x, 10)
+  Candidate (SMT): (ite (< x 1) x 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun clamp ((x Int)) Int (ite (< x 1) x 10))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x 0) (= out_clamp 0)) :named spec_clamp_1))
+(assert (! (=> (> x 10) (= out_clamp 10)) :named spec_clamp_2))
+(assert (! (=> (and (>= x 0) (<= x 10)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp 0) (<= out_clamp 10)) :named spec_clamp_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x 0) (= (clamp x) 0))
+  (=> (> x 10) (= (clamp x) 10))
+  (=> (and (>= x 0) (<= x 10)) (= (clamp x) x))
+  (and (>= (clamp x) 0) (<= (clamp x) 10))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((clamp x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(clamp x)", "x", "out_clamp"]
+    (clamp x) => -1
+    x => -1
+    out_clamp => 0
+[enum=218] Oracle counterexample: input=Dict{Symbol, Any}(:x => -1), expected=0
+[iter=3] enum=218, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(x < 1, 0, 10)
+  Candidate (SMT): (ite (< x 1) 0 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun clamp ((x Int)) Int (ite (< x 1) 0 10))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x 0) (= out_clamp 0)) :named spec_clamp_1))
+(assert (! (=> (> x 10) (= out_clamp 10)) :named spec_clamp_2))
+(assert (! (=> (and (>= x 0) (<= x 10)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp 0) (<= out_clamp 10)) :named spec_clamp_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x 0) (= (clamp x) 0))
+  (=> (> x 10) (= (clamp x) 10))
+  (=> (and (>= x 0) (<= x 10)) (= (clamp x) x))
+  (and (>= (clamp x) 0) (<= (clamp x) 10))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((clamp x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(clamp x)", "x", "out_clamp"]
+    (clamp x) => 10
+    x => 1
+    out_clamp => 1
+[enum=226] Oracle counterexample: input=Dict{Symbol, Any}(:x => 1), expected=1
+[iter=4] enum=226, Added IO counterexample, spec size now=4
+[enum=10000] checking: (0 < x + 0) + 1 | spec size=4
+[enum=20000] checking: (10 > x + 10) - 1 | spec size=4
+[enum=30000] checking: 10 + (x <= x - 10) | spec size=4
+[enum=40000] checking: x * (x >= 10 - 0) | spec size=4
+[enum=50000] checking: 10 < (1 + x) + 0 | spec size=4
+[enum=60000] checking: 10 <= (1 + 1) * 0 | spec size=4
+[enum=70000] checking: 1 < ifelse(10 <= 10, x, 0) | spec size=4
+[enum=80000] checking: 1 > ifelse(0 <= 10, 1, 0) | spec size=4
+[enum=90000] checking: 1 <= ifelse(x <= x, x, 0) | spec size=4
+[enum=100000] checking: 1 >= ifelse(1 > x, 1, 1) | spec size=4
+[enum=110000] checking: 1 == ifelse(x > 0, x, 1) | spec size=4
+[enum=120000] checking: (1 + (0 + 10)) - x | spec size=4
+[enum=130000] checking: x - (1 + x) < 1 | spec size=4
+[enum=140000] checking: 1 - (1 + 1) <= 1 | spec size=4
+[enum=150000] checking: x * (10 + x) == 1 | spec size=4
+[enum=160000] checking: (0 + (10 > 0)) - 10 | spec size=4
+[enum=170000] checking: x * 0 < 1 - 10 | spec size=4
+[enum=180000] checking: (10 - x) + 0 > x | spec size=4
+[enum=190000] checking: ifelse(x < x, 0 - 10, x) | spec size=4
+[enum=200000] checking: ifelse(x < (10 == 0), x, 1) | spec size=4
+[enum=210000] checking: ifelse(x > (0 == 0), 1, 1) | spec size=4
+[enum=220000] checking: ifelse(x <= (10 >= 1), x, 1) | spec size=4
+[enum=230000] checking: ifelse(1 > x, 1, 0 - 1) | spec size=4
+[enum=240000] checking: ifelse(x >= 1, 1, 10 - 1) | spec size=4
+[enum=250000] checking: x + (x - 0 >= x) | spec size=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(x < 10, 0 < x, 10)
+  Candidate (SMT): (ite (< x 10) (< 0 x) 10)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+
+(define-fun clamp ((x Int)) Int (ite (< x 10) (< 0 x) 10))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x 0) (= out_clamp 0)) :named spec_clamp_1))
+(assert (! (=> (> x 10) (= out_clamp 10)) :named spec_clamp_2))
+(assert (! (=> (and (>= x 0) (<= x 10)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp 0) (<= out_clamp 10)) :named spec_clamp_4))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x 0) (= (clamp x) 0))
+  (=> (> x 10) (= (clamp x) 10))
+  (=> (and (>= x 0) (<= x 10)) (= (clamp x) x))
+  (and (>= (clamp x) 0) (<= (clamp x) 10))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x))
+
+; Candidate output(s)
+(get-value ((clamp x)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["(clamp x)", "x", "out_clamp"]
+    (clamp x) => 1
+    x => 2
+    out_clamp => 2
+[enum=253236] Oracle counterexample: input=Dict{Symbol, Any}(:x => 2), expected=2
+[iter=5] enum=253236, Added IO counterexample, spec size now=5
+[enum=260000] checking: ifelse(10 < 0, x >= 1, 0) | spec size=5
+[enum=270000] checking: ifelse(10 > 0, 0 > x, 0) | spec size=5
+[enum=280000] checking: ifelse(10 <= x, 0 == 10, 1) | spec size=5
+[enum=290000] checking: ifelse(10 >= x, 1 <= 0, 1) | spec size=5
+[enum=300000] checking: ifelse(10 == x, 1 < 10, 1) | spec size=5
+[enum=310000] checking: 0 * 10 + (x + 1) | spec size=5
+[enum=320000] checking: 1 * 10 - (0 + 1) | spec size=5
+[enum=330000] checking: (10 * 10) * (1 + 1) | spec size=5
+[enum=340000] checking: ifelse(0 <= 0, x, x < 1) | spec size=5
+[enum=350000] checking: ifelse(0 >= x, 1, 1 <= 1) | spec size=5
+[enum=360000] checking: ifelse(0 == x, 0, x < 1) | spec size=5
+[enum=370000] checking: 10 - ((10 - x) - x) | spec size=5
+[enum=380000] checking: 0 + ifelse(0 == 10, 0, x) | spec size=5
+[enum=390000] checking: 0 - ifelse(10 >= 10, 10, x) | spec size=5
+[enum=400000] checking: 0 * ifelse(1 >= x, 0, 10) | spec size=5
+[enum=410000] checking: (1 <= 1) + 1 * 0 | spec size=5
+[enum=420000] checking: (x == 10) - (x + 0) | spec size=5
+[enum=430000] checking: (0 < 1) < (1 >= 1) | spec size=5
+[enum=440000] checking: (0 == 0) < (x > 10) | spec size=5
+[enum=450000] checking: (x >= 10) > (1 >= 10) | spec size=5
+[enum=460000] checking: (x > 10) < 0 - 10 | spec size=5
+[enum=470000] checking: (1 <= 10) > 10 - 10 | spec size=5
+[enum=480000] checking: (x == 10) <= 0 * 10 | spec size=5
+[enum=490000] checking: (1 < 10) == 10 * 10 | spec size=5
+[enum=500000] checking: 0 + (x <= 1) * 10 | spec size=5
+[enum=510000] checking: 10 - ((0 < x) + 10) | spec size=5
+[enum=520000] checking: (x < 1) + (1 >= 0) | spec size=5
+[enum=530000] checking: (x == 0) + (0 > 1) | spec size=5
+[enum=540000] checking: (10 <= 10) - (10 >= 1) | spec size=5
+[enum=550000] checking: (x >= 1) * (1 == 10) | spec size=5
+[enum=560000] checking: x + (10 - 10 > 1x) | spec size=5
+[enum=570000] checking: x + (1x >= x + x) | spec size=5
+[enum=580000] checking: 0 + (x + x > 1 + x) | spec size=5
+[enum=590000] checking: 0 + (1 + x >= x - x) | spec size=5
+[enum=600000] checking: 1 + (x - x < 1 - x) | spec size=5
+[enum=610000] checking: 1 + (1 - x <= x * x) | spec size=5
+[enum=620000] checking: 1 + (x * x == 1x) | spec size=5
+[enum=630000] checking: 10 + (1 * 0 > x + x) | spec size=5
+[enum=640000] checking: 10 + (x + 0 == 1 + x) | spec size=5
+[enum=650000] checking: x - (1 + 0 > x - x) | spec size=5
+[enum=660000] checking: x - (x - 0 >= 1 - x) | spec size=5
+[enum=670000] checking: 0 - (1 - 0 < x * x) | spec size=5
+[enum=680000] checking: 0 - (x * 0 <= 1x) | spec size=5
+[enum=690000] checking: 0 - (1 * 1 == x + x) | spec size=5
+[enum=700000] checking: 1 - (x + 1 <= 1 + x) | spec size=5
+[enum=710000] checking: 1 - (1 + 1 == x - x) | spec size=5
+[enum=720000] checking: 10 - (x - 1 > 1 - x) | spec size=5
+[enum=730000] checking: 10 - (1 - 1 >= x * x) | spec size=5
+[enum=740000] checking: x * (x * 1 < 1x) | spec size=5
+[enum=750000] checking: x * (1 * 10 <= x + x) | spec size=5
+[enum=760000] checking: 0 * (x + 10 < 1 + x) | spec size=5
+[enum=770000] checking: 0 * (1 + 10 <= x - x) | spec size=5
+[enum=780000] checking: 0 * (x - 10 == 1 - x) | spec size=5
+[enum=790000] checking: 1 * (1 - 10 > x * x) | spec size=5
+[enum=800000] checking: 1 * (x * 10 >= 1x) | spec size=5
+[enum=810000] checking: 10 * (10x < x + x) | spec size=5
+[enum=820000] checking: 10 * (0 + x >= 1 + x) | spec size=5
+[enum=830000] checking: x + ((10 + x) + (10 + 1)) | spec size=5
+[enum=840000] checking: x + (0 - x) * (0 - 1) | spec size=5
+[enum=850000] checking: 0 + ((10 - x) - (10 - 1)) | spec size=5
+[enum=860000] checking: 1 + (0 * x + 0 * 1) | spec size=5
+[enum=870000] checking: 1 + (10x) * (10 * 1) | spec size=5
+[enum=880000] checking: 10 + (0 + 0) * (0 + 1) | spec size=5
+[enum=890000] checking: x - ((10 + 0) - (10 + 1)) | spec size=5
+[enum=900000] checking: 0 - ((0 - 0) + (0 - 1)) | spec size=5
+[enum=910000] checking: 0 - (10 - 0) * (10 - 1) | spec size=5
+[enum=920000] checking: 1 - (0 * 0 - 0 * 1) | spec size=5
+[enum=930000] checking: ((10 < 1) + x) + (10 <= x) | spec size=5
+[enum=940000] checking: ((10 > 0) + 10) + (0 < x) | spec size=5
+[enum=950000] checking: ((10 <= 0) + 0) + (10 <= x) | spec size=5
+[enum=960000] checking: ((10 >= 0) + x) + (0 < x) | spec size=5
+[enum=970000] checking: ((10 == x) + 1) + (10 <= x) | spec size=5
+[enum=980000] checking: ((10 < x) - 0) + (0 < x) | spec size=5
+[enum=990000] checking: ((1 > 10) - 10) + (10 <= x) | spec size=5
+[enum=1000000] checking: ifelse(x < x, 1, (0 > x) * 10) | spec size=5
+[enum=1000001] Reached max_enumerations limit (1000000)
+[enum=1000001] Best program found: ifelse(x < 10, 0 < x, 10) (satisfied 4 examples)
+     Solution: ifelse(x < 10, 0 < x, 10)
+     Iterations: 5
+     Counterexamples: 5
+
+  [medium]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): min_val
+  Candidate (SMT): min_val
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int min_val)
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["min_val", "x", "(clamp x min_val max_val)", "max_val", "out_clamp"]
+    min_val => 0
+    x => 1
+    (clamp x min_val max_val) => 0
+    max_val => 1
+    out_clamp => 1
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:min_val => 0, :max_val => 1, :x => 1), expected=1
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): max_val
+  Candidate (SMT): max_val
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int max_val)
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["min_val", "x", "(clamp x min_val max_val)", "max_val", "out_clamp"]
+    min_val => 0
+    x => 0
+    (clamp x min_val max_val) => 1
+    max_val => 1
+    out_clamp => 0
+[enum=2] Oracle counterexample: input=Dict{Symbol, Any}(:min_val => 0, :max_val => 1, :x => 0), expected=0
+[iter=2] enum=2, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): x
+  Candidate (SMT): x
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int x)
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["min_val", "x", "(clamp x min_val max_val)", "max_val", "out_clamp"]
+    min_val => -1
+    x => 0
+    (clamp x min_val max_val) => 0
+    max_val => -1
+    out_clamp => -1
+[enum=3] Oracle counterexample: input=Dict{Symbol, Any}(:min_val => -1, :max_val => -1, :x => 0), expected=-1
+[iter=3] enum=3, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): min_val + x
+  Candidate (SMT): (+ min_val x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int (+ min_val x))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["min_val", "x", "(clamp x min_val max_val)", "max_val", "out_clamp"]
+    min_val => -2
+    x => 1
+    (clamp x min_val max_val) => -1
+    max_val => 0
+    out_clamp => 0
+[enum=8] Oracle counterexample: input=Dict{Symbol, Any}(:min_val => -2, :max_val => 0, :x => 1), expected=0
+[iter=4] enum=8, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(min_val < x, max_val, min_val)
+  Candidate (SMT): (ite (< min_val x) max_val min_val)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int (ite (< min_val x) max_val min_val))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["min_val", "x", "(clamp x min_val max_val)", "max_val", "out_clamp"]
+    min_val => -2
+    x => -1
+    (clamp x min_val max_val) => 0
+    max_val => 0
+    out_clamp => -1
+[enum=298] Oracle counterexample: input=Dict{Symbol, Any}(:min_val => -2, :max_val => 0, :x => -1), expected=-1
+[iter=5] enum=298, Added IO counterexample, spec size now=5
+
+[ORACLE_CALL #6]
+  Candidate (Julia): ifelse(max_val < x, max_val, x)
+  Candidate (SMT): (ite (< max_val x) max_val x)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const min_val Int)
+(declare-const max_val Int)
+
+(define-fun clamp ((x Int) (min_val Int) (max_val Int)) Int (ite (< max_val x) max_val x))
+
+(declare-const out_clamp Int)
+
+; Spec constraints for clamp (valid outputs: out_clamp)
+(assert (! (=> (< x min_val) (= out_clamp min_val)) :named spec_clamp_1))
+(assert (! (=> (> x max_val) (= out_clamp max_val)) :named spec_clamp_2))
+(assert (! (=> (and (>= x min_val) (<= x max_val)) (= out_clamp x)) :named spec_clamp_3))
+(assert (! (and (>= out_clamp min_val) (<= out_clamp max_val)) :named spec_clamp_4))
+(assert (! (=> (< x min_val) (> out_clamp out_clamp)) :named spec_clamp_5))
+(assert (! (= out_clamp out_clamp) :named spec_clamp_6))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (=> (< x min_val) (= (clamp x min_val max_val) min_val))
+  (=> (> x max_val) (= (clamp x min_val max_val) max_val))
+  (=> (and (>= x min_val) (<= x max_val)) (= (clamp x min_val max_val) x))
+  (and (>= (clamp x min_val max_val) min_val) (<= (clamp x min_val max_val) max_val))
+  (=> (< x min_val) (> (clamp (+ x 1) min_val max_val) (clamp x min_val max_val)))
+  (= (clamp (clamp x min_val max_val) min_val max_val) (clamp x min_val max_val))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x min_val max_val))
+
+; Candidate output(s)
+(get-value ((clamp x min_val max_val)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: unsat
+  Unsatisfiable Core (minimal constraints proving validity):
+    - spec_clamp_4
+    - spec_clamp_5
+    - candidate_check
+[enum=552] SUCCESS: Found candidate satisfying all examples!
+[enum=552] Candidate: ifelse(max_val < x, max_val, x)
+     Solution: ifelse(max_val < x, max_val, x)
+     Iterations: 5
+     Counterexamples: 5
+
+  [hard]
+
+[ORACLE_CALL #1]
+  Candidate (Julia): hard_max
+  Candidate (SMT): hard_max
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int hard_max)
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => 2
+    hard_max => 1
+    x => -1
+    hard_min => 0
+    out_adaptive_clamp => 0
+    soft_min => 2
+[enum=1] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => 1, :soft_max => 2, :soft_min => 2, :hard_min => 0, :x => -1), expected=0
+[iter=1] enum=1, Added IO counterexample, spec size now=1
+
+[ORACLE_CALL #2]
+  Candidate (Julia): hard_min
+  Candidate (SMT): hard_min
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int hard_min)
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => 0
+    hard_max => 1
+    x => 1
+    hard_min => -2
+    out_adaptive_clamp => 0
+    soft_min => -1
+[enum=4] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => 1, :soft_max => 0, :soft_min => -1, :hard_min => -2, :x => 1), expected=0
+[iter=2] enum=4, Added IO counterexample, spec size now=2
+
+[ORACLE_CALL #3]
+  Candidate (Julia): 0
+  Candidate (SMT): 0
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int 0)
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => -2
+    hard_max => 1
+    x => -1
+    hard_min => -3
+    out_adaptive_clamp => -2
+    soft_min => -2
+[enum=6] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => 1, :soft_max => -2, :soft_min => -2, :hard_min => -3, :x => -1), expected=-2
+[iter=3] enum=6, Added IO counterexample, spec size now=3
+
+[ORACLE_CALL #4]
+  Candidate (Julia): ifelse(hard_max < soft_max, hard_min, soft_max)
+  Candidate (SMT): (ite (< hard_max soft_max) hard_min soft_max)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int (ite (< hard_max soft_max) hard_min soft_max))
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => 1
+    hard_max => 0
+    x => 2
+    hard_min => -1
+    out_adaptive_clamp => 0
+    soft_min => 0
+[enum=558] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => 0, :soft_max => 1, :soft_min => 0, :hard_min => -1, :x => 2), expected=0
+[iter=4] enum=558, Added IO counterexample, spec size now=4
+
+[ORACLE_CALL #5]
+  Candidate (Julia): ifelse(hard_max < soft_max, 0, soft_max)
+  Candidate (SMT): (ite (< hard_max soft_max) 0 soft_max)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int (ite (< hard_max soft_max) 0 soft_max))
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => 1
+    hard_max => -1
+    x => 2
+    hard_min => -2
+    out_adaptive_clamp => -1
+    soft_min => -1
+[enum=586] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => -1, :soft_max => 1, :soft_min => -1, :hard_min => -2, :x => 2), expected=-1
+[iter=5] enum=586, Added IO counterexample, spec size now=5
+[enum=10000] checking: ifelse(1 > 1, 1, soft_max) | spec size=5
+[enum=20000] checking: ifelse(hard_max == x, hard_max, hard_max) | spec size=5
+[enum=30000] checking: 0 >= (hard_max == soft_min) | spec size=5
+[enum=40000] checking: (0 <= hard_max) > hard_min | spec size=5
+[enum=50000] checking: (hard_min == 0) - soft_max | spec size=5
+[enum=60000] checking: (soft_max < soft_min * x) + 0 | spec size=5
+[enum=70000] checking: (1 < 1 - 0) + hard_max | spec size=5
+[enum=80000] checking: (x > hard_min - 0) + soft_min | spec size=5
+[enum=90000] checking: (soft_min <= hard_max - 0) + x | spec size=5
+[enum=100000] checking: (hard_max >= x + 0) + 1 | spec size=5
+[enum=110000] checking: (0 >= soft_max + 1) + soft_max | spec size=5
+[enum=120000] checking: (soft_min == 0 * 1) + hard_min | spec size=5
+[enum=130000] checking: (hard_max < soft_min * 1) - 0 | spec size=5
+[enum=140000] checking: (0 < hard_max * hard_max) - hard_max | spec size=5
+[enum=150000] checking: (hard_min > x - hard_max) - soft_min | spec size=5
+[enum=160000] checking: (soft_max <= soft_max - hard_max) - x | spec size=5
+[enum=170000] checking: (1 <= 0 + hard_max) - 1 | spec size=5
+[enum=180000] checking: (x >= soft_min + soft_max) - soft_max | spec size=5
+[enum=190000] checking: hard_max + (1 > soft_max * hard_max) | spec size=5
+[enum=200000] checking: soft_max + (0 > soft_max * soft_min) | spec size=5
+
+[ORACLE_CALL #6]
+  Candidate (Julia): (hard_max < 0 - soft_min) * soft_min
+  Candidate (SMT): (* (< hard_max (- 0 soft_min)) soft_min)
+  [DEBUG Z3 QUERY]
+(set-logic LIA)
+(set-option :model.completion true)
+(set-option :produce-unsat-cores true)
+
+(declare-const x Int)
+(declare-const soft_min Int)
+(declare-const hard_min Int)
+(declare-const soft_max Int)
+(declare-const hard_max Int)
+(declare-const y Int)
+
+(define-fun adaptive_clamp ((x Int) (soft_min Int) (hard_min Int) (soft_max Int) (hard_max Int)) Int (* (< hard_max (- 0 soft_min)) soft_min))
+
+(declare-const out_adaptive_clamp Int)
+
+; Spec constraints for adaptive_clamp (valid outputs: out_adaptive_clamp)
+(assert (! (and (>= out_adaptive_clamp hard_min) (<= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_1))
+(assert (! (=> (< x hard_min) (= out_adaptive_clamp hard_min)) :named spec_adaptive_clamp_2))
+(assert (! (=> (> x hard_max) (= out_adaptive_clamp hard_max)) :named spec_adaptive_clamp_3))
+(assert (! (=> (and (>= x soft_min) (<= x soft_max)) (= out_adaptive_clamp x)) :named spec_adaptive_clamp_4))
+(assert (! (=> (and (>= x hard_min) (< x soft_min)) (= out_adaptive_clamp soft_min)) :named spec_adaptive_clamp_5))
+(assert (! (=> (and (> x soft_max) (<= x hard_max)) (= out_adaptive_clamp soft_max)) :named spec_adaptive_clamp_6))
+(assert (! (=> (< x y) (<= out_adaptive_clamp out_adaptive_clamp)) :named spec_adaptive_clamp_7))
+(assert (! (= out_adaptive_clamp out_adaptive_clamp) :named spec_adaptive_clamp_8))
+
+; Check if candidate violates any constraint
+(assert (! (not
+  (and
+    (and (>= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (< x hard_min) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_min))
+  (=> (> x hard_max) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) hard_max))
+  (=> (and (>= x soft_min) (<= x soft_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) x))
+  (=> (and (>= x hard_min) (< x soft_min)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min))
+  (=> (and (> x soft_max) (<= x hard_max)) (= (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_max))
+  (=> (< x y) (<= (adaptive_clamp x soft_min hard_min soft_max hard_max) (adaptive_clamp y soft_min hard_min soft_max hard_max)))
+  (= (adaptive_clamp (adaptive_clamp x soft_min hard_min soft_max hard_max) soft_min hard_min soft_max hard_max) (adaptive_clamp x soft_min hard_min soft_max hard_max))
+  )
+) :named candidate_check))
+
+(check-sat)
+(get-unsat-core)
+
+; Free variable values at counterexample
+(get-value (x soft_min hard_min soft_max hard_max y))
+
+; Candidate output(s)
+(get-value ((adaptive_clamp x soft_min hard_min soft_max hard_max y)))
+
+; Valid spec output(s) - what the spec says is correct
+(get-value (out_adaptive_clamp))
+
+  [END Z3 QUERY]
+  Z3 Status: sat
+  Model keys: ["y", "soft_max", "hard_max", "x", "hard_min", "out_adaptive_clamp", "soft_min"]
+    y => 0
+    soft_max => 0
+    hard_max => 2
+    x => -3
+    hard_min => -1
+    out_adaptive_clamp => -1
+    soft_min => -2
+[enum=201573] Oracle counterexample: input=Dict{Symbol, Any}(:hard_max => 2, :soft_max => 0, :soft_min => -2, :hard_min => -1, :x => -3), expected=-1
+[iter=6] enum=201573, Added IO counterexample, spec size now=6
+[enum=210000] checking: soft_min + (x > soft_max * x) | spec size=6
+[enum=220000] checking: hard_min + (hard_min > soft_max * 1) | spec size=6
+[enum=230000] checking: x + (soft_min > soft_min * soft_max) | spec size=6
+[enum=240000] checking: 0 + (soft_max > soft_min * hard_min) | spec size=6
+[enum=250000] checking: 1 + (hard_max > soft_min * 0) | spec size=6
+[enum=260000] checking: hard_max - (1 < hard_min * hard_max) | spec size=6
+[enum=270000] checking: soft_max - (0 < hard_min * soft_min) | spec size=6
+[enum=280000] checking: soft_min - (x < hard_min * 1) | spec size=6
+[enum=290000] checking: hard_min - (hard_min < x * soft_max) | spec size=6
+[enum=300000] checking: x - (soft_min < x * hard_min) | spec size=6
+[enum=310000] checking: 0 - (soft_max < x * 0) | spec size=6
+[enum=320000] checking: 1 - (hard_max < 0hard_max) | spec size=6
+[enum=330000] checking: 1 - (1 == 0soft_min) | spec size=6
+[enum=340000] checking: hard_max * (0 == 0 * x) | spec size=6
+[enum=350000] checking: soft_max * (x == 0 * 1) | spec size=6
+[enum=360000] checking: soft_min * (hard_min == 1soft_max) | spec size=6
+[enum=370000] checking: hard_min * (soft_min == 1hard_min) | spec size=6
+[enum=380000] checking: x * (soft_max == 1 * 0) | spec size=6
+[enum=390000] checking: 0 * (soft_max == hard_max + hard_max) | spec size=6
+[enum=400000] checking: 1 * (hard_max == hard_max + soft_min) | spec size=6
+[enum=410000] checking: soft_max < x * hard_max + hard_max | spec size=6
+[enum=420000] checking: soft_min < (soft_max * hard_max) * soft_min | spec size=6
+[enum=430000] checking: x < (0 - hard_max) - x | spec size=6
+[enum=440000] checking: 1 < (soft_min - hard_max) + 1 | spec size=6
+[enum=450000] checking: hard_max > (1 + soft_max) * soft_max | spec size=6
+[enum=460000] checking: soft_min > (hard_min + soft_max) - hard_min | spec size=6
+[enum=470000] checking: x > (hard_max + soft_max) + 0 | spec size=6
+[enum=480000] checking: 0 > x * soft_min - hard_max | spec size=6
+[enum=490000] checking: hard_max <= soft_max * soft_min + soft_min | spec size=6
+[enum=500000] checking: soft_max <= (0 - soft_min) * x | spec size=6
+[enum=510000] checking: hard_min <= (soft_min - soft_min) - 1 | spec size=6
+[enum=520000] checking: 0 <= (1 + hard_min) + soft_max | spec size=6
+[enum=530000] checking: 1 <= (hard_min + hard_min) * hard_min | spec size=6
+[enum=540000] checking: soft_max >= (hard_max + hard_min) - 0 | spec size=6
+[enum=550000] checking: soft_min >= (x * x) * hard_max | spec size=6
+[enum=560000] checking: x >= soft_max * x - soft_min | spec size=6
+[enum=570000] checking: 1 >= (0 - x) + x | spec size=6
+[enum=580000] checking: hard_max == (soft_min - x) * 1 | spec size=6
+[enum=590000] checking: soft_min == (1 + 0) - soft_max | spec size=6
+[enum=600000] checking: x == (hard_min + 0) + hard_min | spec size=6
+[enum=610000] checking: 0 == (hard_max + 0) * 0 | spec size=6
+[enum=620000] checking: (soft_min + x < x) + hard_max | spec size=6
+[enum=630000] checking: (hard_min * soft_max < x) + soft_min | spec size=6
+[enum=640000] checking: (hard_min - 0 > x) + x | spec size=6
+[enum=650000] checking: (x + soft_min <= x) + 1 | spec size=6
+[enum=660000] checking: (x * 1 <= 0) + soft_max | spec size=6
+[enum=670000] checking: (0 - hard_min >= 0) + hard_min | spec size=6
+[enum=680000] checking: (1 + hard_max == 0) + 0 | spec size=6
+[enum=690000] checking: (1x == 1) + hard_max | spec size=6
+[enum=700000] checking: (hard_max * soft_max < 1) - soft_min | spec size=6
+[enum=710000] checking: (hard_max - 0 > 1) - x | spec size=6
+[enum=720000] checking: (soft_max + soft_min <= 1) - 1 | spec size=6
+[enum=730000] checking: (soft_min * hard_max <= hard_max) - soft_max | spec size=6
+[enum=740000] checking: (soft_min - x >= hard_max) - hard_min | spec size=6
+[enum=750000] checking: (hard_min + soft_max == hard_max) - 0 | spec size=6
+[enum=760000] checking: (hard_min * 0 == soft_max) - hard_max | spec size=6
+[enum=770000] checking: (x - soft_min < soft_max) * soft_min | spec size=6
+[enum=780000] checking: (hard_max + 1) + (1 == 0) | spec size=6
+[enum=790000] checking: (hard_min + 1) + (hard_max <= hard_max) | spec size=6
+[enum=800000] checking: (1 + 0) + (hard_max == soft_min) | spec size=6
+[enum=810000] checking: (soft_min - 0) + (hard_max > x) | spec size=6
+[enum=820000] checking: (0 - x) + (hard_max >= 1) | spec size=6
+[enum=830000] checking: soft_max * x + (soft_max < soft_max) | spec size=6
+[enum=840000] checking: x * hard_min + (soft_max <= 1) | spec size=6
+[enum=850000] checking: (hard_max + soft_min) - (soft_min == soft_max) | spec size=6
+[enum=860000] checking: (hard_min + soft_min) - (soft_min > hard_min) | spec size=6
+[enum=870000] checking: (1 + soft_max) - (soft_min >= 0) | spec size=6
+[enum=880000] checking: (soft_min - soft_max) - (hard_min < hard_max) | spec size=6
+[enum=890000] checking: (0 - hard_max) - (hard_min <= soft_min) | spec size=6
+[enum=900000] checking: hard_max * 1 - (hard_min == x) | spec size=6
+[enum=910000] checking: hard_min * 1 - (hard_min > 1) | spec size=6
+[enum=920000] checking: 1 * 0 - (x >= soft_max) | spec size=6
+[enum=930000] checking: (soft_min + 0) * (x < hard_min) | spec size=6
+[enum=940000] checking: (0 + x) * (x <= 0) | spec size=6
+[enum=950000] checking: (soft_max - hard_min) * (0 == hard_max) | spec size=6
+[enum=960000] checking: (x - hard_min) * (0 > soft_min) | spec size=6
+[enum=970000] checking: (hard_max * soft_min) * (0 >= 1) | spec size=6
+[enum=980000] checking: (hard_min * soft_min) * (1 < soft_max) | spec size=6
+[enum=990000] checking: (1soft_max) * (1 <= hard_min) | spec size=6
+[enum=1000000] checking: hard_min * (x - hard_max) < 1 | spec size=6
+[enum=1000001] Reached max_enumerations limit (1000000)
+[enum=1000001] Best program found: (hard_max < 0 - soft_min) * soft_min (satisfied 5 examples)
+     Solution: (hard_max < 0 - soft_min) * soft_min
+     Iterations: 6
+     Counterexamples: 6
+
+================================================================================
+ Benchmark synthesis complete!
+================================================================================
+
+Solution files saved to benchmarks/{problem}/{difficulty}.solution
+

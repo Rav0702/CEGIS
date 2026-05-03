@@ -186,6 +186,7 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     # Set logic
     push!(query_parts, "(set-logic $(spec.logic))")
     push!(query_parts, "(set-option :model.completion true)")
+    push!(query_parts, "(set-option :produce-unsat-cores true)")
     
     # Preamble: sorts, datatypes, helper functions (define-fun, define-funs-rec), uninterpreted functions
     # These must be included so that function definitions are available when constraints are evaluated
@@ -253,10 +254,12 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
         
         if !isempty(constraints_for_func)
             push!(query_parts, "; Spec constraints for $(sfun.name) (valid outputs: $fresh_name)")
-            for constraint in constraints_for_func
+            for (idx, constraint) in enumerate(constraints_for_func)
                 # Replace function calls with fresh constant
                 spec_constraint = substitute_synth_calls(constraint, sfun.name, fresh_name)
-                push!(query_parts, "(assert $spec_constraint)")
+                # Add label for unsat core tracking
+                label = "spec_$(sfun.name)_$(idx)"
+                push!(query_parts, "(assert (! $spec_constraint :named $label))")
             end
             push!(query_parts, "")
         end
@@ -267,17 +270,18 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     if !isempty(spec.constraints)
         constraint_list = join(spec.constraints, "\n  ")
         push!(query_parts, "; Check if candidate violates any constraint")
-        push!(query_parts, "(assert (not")
+        push!(query_parts, "(assert (! (not")
         push!(query_parts, "  (and")
         push!(query_parts, "    $constraint_list")
         push!(query_parts, "  )")
-        push!(query_parts, "))")
+        push!(query_parts, ") :named candidate_check))")
     else
         push!(query_parts, "(assert false)   ; no constraints to verify")
     end
     
     push!(query_parts, "")
     push!(query_parts, "(check-sat)")
+    push!(query_parts, "(get-unsat-core)")
     
     # Extract values to see the counterexample
     if !isempty(spec.free_vars)

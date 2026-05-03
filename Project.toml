@@ -3,13 +3,22 @@ uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 version = "0.1.0"
 
 [deps]
+HerbConstraints = "1fa96474-3206-4513-b4fa-23913f296dfc"
 HerbCore = "2b23ba43-8213-43cb-b5ea-38c12b45bd45"
 HerbGrammar = "4ef9e186-2fe5-4b24-8de7-9f7291f24af7"
-HerbConstraints = "1fa96474-3206-4513-b4fa-23913f296dfc"
 HerbInterpret = "5bbddadd-02c5-4713-84b8-97364418cca7"
 HerbSearch = "3008d8e8-f9aa-438a-92ed-26e9c7b4829f"
 HerbSpecification = "6d54aada-062f-46d8-85cf-a1ceaf058a06"
-Symbolics = "0c5d862f-8b57-4792-8d23-62f2488db953"
-SymbolicSMT = "d8effb0f-dd1a-4feb-93fa-e0ccd191eb55"
-Z3 = "d7a85e41-266e-5e84-9332-e5810b0c1d92"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+SymbolicSMT = "a0d8a0e1-65bc-4be1-9afb-79a704359442"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+Z3 = "06b161dc-0161-11ea-0f74-41f836f4024b"
 
+[compat]
+Logging = "1.11.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f2afa"
+
+[targets]
+test = ["Test"]

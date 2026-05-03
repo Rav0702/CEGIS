@@ -1,0 +1,6 @@
+Problem: conditional_sum
+Difficulty: hard
+Status: cegis_failure
+Iterations: 4
+Counterexamples: 4
+Solution: ifelse(z < 15, 0, z)

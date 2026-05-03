@@ -145,7 +145,7 @@ function extract_counterexample(
         catch query_error
             println("  [ERROR in verify_query]: $query_error")
             # Treat verification errors as unknown status (skip this candidate)
-            CEXGeneration.Z3Result(:unknown, Dict{String, Any}())
+            CEXGeneration.Z3Result(:unknown, Dict{String, Any}(), String[])
         end
         
         println("  Z3 Status: $(result.status)")
@@ -153,6 +153,14 @@ function extract_counterexample(
             println("  Model keys: $(keys(result.model))")
             for (k, v) in result.model
                 println("    $k => $v")
+            end
+        end
+        
+        # If unsat, print the unsatisfiable core
+        if result.status == :unsat && !isempty(result.unsat_core)
+            println("  Unsatisfiable Core (minimal constraints proving validity):")
+            for label in result.unsat_core
+                println("    - $label")
             end
         end
         

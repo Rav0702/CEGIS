@@ -1,0 +1,6 @@
+Problem: max_two
+Difficulty: easy
+Status: cegis_success
+Iterations: 4
+Counterexamples: 4
+Solution: ifelse(y < x, x, y)

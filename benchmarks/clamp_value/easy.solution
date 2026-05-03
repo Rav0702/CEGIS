@@ -1,0 +1,6 @@
+Problem: clamp_value
+Difficulty: easy
+Status: cegis_failure
+Iterations: 5
+Counterexamples: 5
+Solution: ifelse(x < 10, 0 < x, 10)
