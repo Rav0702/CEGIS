@@ -1,0 +1,139 @@
+================================================================================
+QUICK REFERENCE: Z3 Query Construction in CEGIS
+================================================================================
+
+MAIN QUERY BUILDING CHAIN:
+  extract_counterexample() [z3_oracle.jl:108-211]
+    → to_smt2(parser, candidate) [candidates.jl:51-502]
+    → generate_cex_query(spec, candidates) [CEXGeneration.jl:80-88]
+    → generate_query(spec, smt_candidates) [query.jl:179-308]
+    → verify_query(query) [z3_verify.jl:161-194]
+
+================================================================================
+GET-VALUE COMMAND CONSTRUCTION LOCATIONS:
+================================================================================
+
+1. FREE VARIABLE VALUES (query.jl:282-288)
+   Line 286: var_list = join([fv.name for fv in spec.free_vars], " ")
+   Line 287: push!(query_parts, "(get-value ($var_list))")
+   
+   Example output: (get-value (x y z))
+
+2. CANDIDATE FUNCTION OUTPUT (query.jl:290-297)
+   Line 295: args = join([fv.name for fv in spec.free_vars], " ")
+   Line 296: push!(query_parts, "(get-value (($(sfun.name) $args)))")
+   
+   Example output: (get-value ((max3 x y z)))
+
+3. SPEC OUTPUT (FRESH CONSTANT) (query.jl:299-305)
+   Line 302: fresh_name = get_fresh_const_name(sfun)
+   Line 303: push!(query_parts, "(get-value ($fresh_name))")
+   
+   Example output: (get-value (out_max3))
+
+================================================================================
+FRESH CONSTANT NAMING:
+================================================================================
+
+Function: get_fresh_const_name() [query.jl:18-20]
+Pattern: "out_" + synthesis_function_name
+Examples:
+  max3 → out_max3
+  guard_fn → out_guard_fn
+  sym_max → out_sym_max
+
+================================================================================
+TYPE TRACKING & CONVERSIONS:
+================================================================================
+
+Bool Detection (query.jl:133-148):
+  - Checks if expression starts with boolean operators
+  - Operators: =, <, >, <=, >=, and, or, not, distinct
+
+Bool to Int Wrapping (query.jl:153-158):
+  - Pattern: (ite <bool_expr> 1 0)
+  - Applied when Bool expression found in Int context
+
+Parser Type System (candidates.jl):
+  
+  AbstractCandidateParser (base type, line 34)
+    ├─ InfixCandidateParser (line 220)
+    │   └─ Strictly-typed, cannot handle mixed bool-int
+    │
+    └─ SymbolicCandidateParser (line 262)
+        ├─ Type-aware recursive descent parser
+        ├─ Returns TypedExpr (line 272)
+        │   ├─ IntExpr (line 274)
+        │   └─ BoolExpr (line 278)
+        └─ Coercion: _bool_to_int() (line 283)
+
+Operator Type Info (candidates.jl:296-302):
+  Comparisons return :bool (=, !=, <, <=, >, >=)
+  Arithmetic returns :int (+, -, *)
+  Logical returns :bool (and, or)
+
+================================================================================
+ERROR HANDLING & Z3 STATUS:
+================================================================================
+
+Z3 Status Printing (z3_oracle.jl:151):
+  println("  Z3 Status: $(result.status)")
+
+Possible Status Values (z3_verify.jl:20-23):
+  :sat     - Counterexample found (candidate violates constraint)
+  :unsat   - Valid candidate (no counterexample)
+  :unknown - Z3 error (e.g., type mismatch)
+
+Error Context (z3_oracle.jl:143-169):
+  Type mismatch errors → status = :unknown
+  After catch: "Z3 had an error - likely type mismatch"
+
+================================================================================
+KEY FILES:
+================================================================================
+
+CEXGeneration.jl ......... Main module wrapper (80-88: entry point)
+query.jl ................. Query building (179-308: generate_query)
+candidates.jl ........... Candidate parsing (500-502: candidate_to_smt2)
+z3_verify.jl ............ Query execution (161-194: verify_query)
+z3_oracle.jl ............ Oracle interface (108-211: extract_counterexample)
+
+All paths: /Users/howie/.julia/dev/CEGIS/src/CEXGeneration/ or Oracles/
+
+================================================================================
+SUBSTITUTION FUNCTIONS:
+================================================================================
+
+substitute_params() [query.jl:107-125]
+  - Replaces free variables with function parameters
+  - Pattern: \b<var_name>\b (word boundary matching)
+  - Example: x1 → x (mapping free var to param)
+
+substitute_synth_calls() [query.jl:40-90]
+  - Replaces (sfun_name ...) with fresh_const_name
+  - Finds matching parentheses
+  - Example: (max3 x y z) → out_max3
+
+get_fresh_const_name() [query.jl:18-20]
+  - Returns "out_" + sfun.name
+
+================================================================================
+MODEL PARSING FROM GET-VALUE OUTPUT:
+================================================================================
+
+_parse_get_value_output() [z3_verify.jl:52-75]
+  1. Tokenize Z3 output
+  2. Collect key-value pairs recursively
+  3. Parse numerals: integers, "true"→1, "false"→0
+  4. Normalize keys: "( x y )" → "x y"
+  5. Return Dict{String, Any}
+
+Example Z3 Output:
+  ((x 1) (y 0) (z 0))
+  (((max3 x y z) 0))
+  ((out_max3 1))
+
+Example Parsed Model:
+  Dict("x" => 1, "y" => 0, "z" => 0, "max3 x y z" => 0, "out_max3" => 1)
+
+================================================================================

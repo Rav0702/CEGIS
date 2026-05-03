@@ -34,6 +34,7 @@ Fields:
 - `enum_count::Int` — Enumeration counter for debugging
 - `test_candidate::Union{String,Nothing}` — Optional candidate to test at specific enumeration
 - `parser::CEXGeneration.AbstractCandidateParser` — Pluggable parser for candidate→SMT-LIB2 conversion
+- `use_direct_conversion::Bool` — If true, use direct RuleNode→SMT-LIB2; else use multi-stage conversion
 
 The oracle converts candidates to Z3 expressions using the configured parser, then uses Z3's string output for SMT-LIB2.
 """
@@ -47,10 +48,11 @@ mutable struct Z3Oracle <: AbstractOracle
     enum_count::Int              # Track enumeration count
     test_candidate::Union{String,Nothing}  # Candidate to test at enumeration 1000
     parser::CEXGeneration.AbstractCandidateParser  # Pluggable candidate parser
+    use_direct_conversion::Bool  # Use direct RuleNode→SMT-LIB2 (true) or multi-stage (false)
 end
 
 """
-    Z3Oracle(spec_file::String, grammar::AbstractGrammar; mod::Module = Main, parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser())
+    Z3Oracle(spec_file::String, grammar::AbstractGrammar; mod::Module = Main, parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser(), use_direct_conversion::Bool = false)
 
 Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 
@@ -59,6 +61,7 @@ Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 - `grammar::AbstractGrammar` — Grammar for candidate generation
 - `mod::Module` — Module context (default: Main)
 - `parser::CEXGeneration.AbstractCandidateParser` — Candidate parser implementation (default: InfixCandidateParser)
+- `use_direct_conversion::Bool` — Enable direct RuleNode→SMT-LIB2 conversion (default: false for backwards compatibility)
 
 # Returns
 - `Z3Oracle` instance with parsed specification and Z3 context
@@ -67,13 +70,15 @@ Create a Z3Oracle that uses native Z3 SMT solving for formal verification.
 ```
 oracle = Z3Oracle("problem.sl", grammar)
 oracle2 = Z3Oracle("problem.sl", grammar, parser=SymbolicCandidateParser())
+oracle3 = Z3Oracle("problem.sl", grammar, use_direct_conversion=true)  # Use new direct converter
 ```
 """
 function Z3Oracle(
     spec_file::String,
     grammar::AbstractGrammar;
     mod::Module = Main,
-    parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser()
+    parser::CEXGeneration.AbstractCandidateParser = CEXGeneration.get_default_candidate_parser(),
+    use_direct_conversion::Bool = false
 )
     # CEXGeneration is included in parent CEGIS module before this file is included
     spec = try
@@ -95,7 +100,7 @@ function Z3Oracle(
         end
     end
     
-    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing, parser)
+    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing, parser, use_direct_conversion)
 end
 
 """
@@ -115,12 +120,17 @@ function extract_counterexample(
         oracle.enum_count += 1
         current_enum = oracle.enum_count
         
-        # Convert RuleNode to Julia expression
-        candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
-        candidate_readable = string(candidate_expr)
-        
-        # Parse candidate to SMT-LIB2 format using injected parser
-        candidate_str = CEXGeneration.to_smt2(oracle.parser, candidate_readable)
+        # Convert candidate using selected method
+        if oracle.use_direct_conversion
+            # Converts RuleNode → SMT-LIB2 directly, skipping intermediate representations
+            candidate_str = CEXGeneration.rulenode_to_smt2(candidate, oracle.grammar)
+            candidate_readable = "[direct RuleNode→SMT-LIB2]"
+        else
+            # Converts: RuleNode → Expr → String → SMT-LIB2
+            candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
+            candidate_readable = string(candidate_expr)
+            candidate_str = CEXGeneration.to_smt2(oracle.parser, candidate_readable)
+        end
         
         # Get the function name from the spec (assume single synthesis function)
         if isempty(oracle.spec.synth_funs)
