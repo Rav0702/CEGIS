@@ -122,12 +122,10 @@ function extract_counterexample(
         
         # Convert candidate using selected method
         if oracle.use_direct_conversion
-            # NEW (simplified, direct conversion - RECOMMENDED)
             # Converts RuleNode → SMT-LIB2 directly, skipping intermediate representations
             candidate_str = CEXGeneration.rulenode_to_smt2(candidate, oracle.grammar)
             candidate_readable = "[direct RuleNode→SMT-LIB2]"
         else
-            # OLD (multi-stage, for backwards compatibility - DEFAULT)
             # Converts: RuleNode → Expr → String → SMT-LIB2
             candidate_expr = HerbGrammar.rulenode2expr(candidate, oracle.grammar)
             candidate_readable = string(candidate_expr)
