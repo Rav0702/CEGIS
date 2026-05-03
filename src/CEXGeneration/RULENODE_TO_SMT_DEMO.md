@@ -238,9 +238,6 @@ Limitations:
 1. Requires RuleNode & grammar (cannot convert raw infix strings)
    - Solution: Use old to_smt2() for raw strings if needed
    
-2. No support for user-defined functions (only operators in grammar)
-   - Solution: Extend _rulenode_to_smt_impl to handle custom functions
-   
-3. Variables assumed Int by default
+2. Variables assumed Int by default
    - Solution: Could accept type signature parameter in future
 """
