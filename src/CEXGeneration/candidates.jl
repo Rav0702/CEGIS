@@ -173,8 +173,19 @@ function _infix_parse_expr(p::_InfixParserImpl, min_prec::Int=0)::String
     lhs
 end
 
-_infix_parse_unary(p::_InfixParserImpl) =
-    _pk(p) == "not" ? (_nx(p); "(not $(_infix_parse_primary(p)))") : _infix_parse_primary(p)
+function _infix_parse_unary(p::_InfixParserImpl)::String
+    t = _pk(p)
+    if t == "not"
+        _nx(p)
+        return "(not $(_infix_parse_primary(p)))"
+    end
+    if t == "-"
+        # unary minus: parse following primary and wrap
+        _nx(p)
+        return "(- $(_infix_parse_primary(p)))"
+    end
+    return _infix_parse_primary(p)
+end
 
 function _infix_parse_primary(p::_InfixParserImpl)::String
     t = _pk(p)
