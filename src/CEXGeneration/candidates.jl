@@ -91,10 +91,7 @@ function tokenise_infix(src::String)::Vector{String}
         end
     end
 
-    # HACK:
-    # Post-process to handle implicit multiplication (e.g., 1y → 1 * y, 2x0 → 2 * x0)
-    # BUT: preserve variable names like x0, x1 (letter-start identifier with digits)
-    # I don't like that we are doing this here, there must be a better way, so we are trying the SymbolicCandidateParser that doesn't require this hack.
+    # Post-process implicit multiplication (e.g., 1y -> 1 * y) while preserving x0/x1.
     result = String[]
     for token in tokens
         if length(token) > 1

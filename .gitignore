@@ -12,3 +12,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Generated outputs
+test_output.txt
+test_output_full.txt
+benchmark_analysis.txt
+spec_files/phase3_benchmarks/result_*.txt
