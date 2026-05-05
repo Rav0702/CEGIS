@@ -13,7 +13,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -35,7 +36,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
             spec_path;
             desired_solution=expected,
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -54,7 +56,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -67,7 +70,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -80,7 +84,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -94,7 +99,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.program !== nothing
@@ -113,7 +119,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         # Note: max3 is a known harder problem, but we still expect synthesis to attempt it
@@ -128,7 +135,8 @@ synthesis loop to verify that the tool can find solutions or recognize known lim
         result = run_spec_synthesis(
             spec_path;
             max_depth=5,
-            max_enumerations=100_000
+            max_enumerations=100_000,
+            use_direct_conversion=USE_DIRECT_RULENODE_TO_SMT2
         )
         
         @test result.status !== nothing

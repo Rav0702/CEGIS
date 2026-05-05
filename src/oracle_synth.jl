@@ -69,7 +69,7 @@ function run_synthesis(
     max_enumerations::Int = typemax(Int),
     mod::Module = Main,
     eval_fn::Union{Function, Nothing} = nothing,
-    use_direct_conversion::Bool = false) :: CEGISResult
+    use_direct_conversion::Bool = true) :: CEGISResult
     
     # Extract grammar from iterator
     grammar = HerbSearch.get_grammar(iterator)
