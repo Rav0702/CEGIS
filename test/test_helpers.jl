@@ -47,8 +47,9 @@ function solution_matches(actual::String, expected::String)::Bool
 end
 
 """
-    run_spec_synthesis(spec_path::String; desired_solution=nothing, 
-                       max_depth=5, max_enumerations=100_000)
+    run_spec_synthesis(spec_path::String; desired_solution=nothing,
+                       max_depth=5, max_enumerations=100_000,
+                       use_direct_conversion=false)
 
 Convenience wrapper to run synthesis on a spec file with standard configuration.
 
@@ -58,7 +59,8 @@ function run_spec_synthesis(
     spec_path::String;
     desired_solution=nothing,
     max_depth=5,
-    max_enumerations=100_000
+    max_enumerations=100_000,
+    use_direct_conversion::Bool=true
 )
     # Build problem and grammar from spec
     problem = CEGIS.CEGISProblem(spec_path; desired_solution=desired_solution)
@@ -76,6 +78,7 @@ function run_spec_synthesis(
         problem,
         iterator;
         max_enumerations=max_enumerations,
+        use_direct_conversion=use_direct_conversion,
     )
     
     result

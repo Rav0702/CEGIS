@@ -28,6 +28,9 @@ include("test_helpers.jl")
 # Set parser to handle Bool→Int coercion automatically
 CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCandidateParser())
 
+# Conversion mode toggle (mirrors scripts/test_phase3_e2e_synthesis.jl)
+const USE_DIRECT_RULENODE_TO_SMT2 = true
+
 @testset "CEGIS.jl" verbose = true begin
     include("test_parsing_utilities.jl")
     include("test_e2e_synthesis.jl")

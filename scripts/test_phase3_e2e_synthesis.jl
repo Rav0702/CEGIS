@@ -39,6 +39,11 @@ const BENCHMARKS = Dict(
 # Use type-aware parser that handles Bool→Int coercion automatically
 CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCandidateParser())
 
+# Conversion mode toggle:
+# true  => direct RuleNode -> SMT-LIB2 (`rulenode_to_smt2`)
+# false => multi-stage RuleNode -> Expr -> string -> SMT-LIB2
+const USE_DIRECT_RULENODE_TO_SMT2 = true
+
 results = []
 for (name, config) in BENCHMARKS
     try
@@ -63,18 +68,21 @@ for (name, config) in BENCHMARKS
         result = CEGIS.run_synthesis(
             problem, iterator;
             max_enumerations = 1_000_000,
+            use_direct_conversion = USE_DIRECT_RULENODE_TO_SMT2,
         )
         
-        # Check if we found a solution
+        status_str = "$(result.status)"
+        verified = status_str == "cegis_success"
+
+        # Print best candidate if available, but only mark `found=true` for verified success
         if result.program !== nothing
             solution_expr = HerbGrammar.rulenode2expr(result.program, grammar)
             solution_str = string(solution_expr)
-            status_str = "$(result.status)"
-            println("      Found:    $solution_str")
-            push!(results, (name=name, status=status_str, iters=result.iterations, found=true, solution=solution_str, expected=config.expected))
+            println("      Candidate: $solution_str")
+            push!(results, (name=name, status=status_str, iters=result.iterations, found=verified, solution=solution_str, expected=config.expected))
         else
-            println("      Found:    NONE")
-            push!(results, (name=name, status="$(result.status)", iters=result.iterations, found=false, solution=nothing, expected=config.expected))
+            println("      Candidate: NONE")
+            push!(results, (name=name, status=status_str, iters=result.iterations, found=false, solution=nothing, expected=config.expected))
         end
         println()
     catch e
@@ -93,9 +101,14 @@ for r in results
         match_str = r.solution == r.expected ? "MATCH" : "MISMATCH"
     end
     println("  $found_str (name = \"$(r.name)\", status = \"$(r.status)\", iters = $(r.iters), found = $(r.found))")
+    if r.solution !== nothing
+        label = r.found ? "Found" : "Best"
+        println("      $label:     $(r.solution)")
+    end
     if r.found
-        println("      Found:    $(r.solution)")
         println("      Expected: $expected_str $match_str")
+    elseif r.expected !== nothing
+        println("      Expected: $expected_str")
     end
 end
 success_count = sum(r.found for r in results)
