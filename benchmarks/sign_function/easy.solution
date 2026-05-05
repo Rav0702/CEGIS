@@ -1,6 +1,9 @@
 Problem: sign_function
 Difficulty: easy
-Status: cegis_success
-Iterations: 4
-Counterexamples: 4
-Solution: (0 < x) - (x < 0)
+Type: DEBUG SOLUTION (Expected)
+Status: VERIFIED
+Solution: ifelse(x > 0, 1, ifelse(x = 0, 0, -1))
+
+Verification Result:
+    ✓ VERIFIED: All constraints satisfied
+Z3 Status: unsat

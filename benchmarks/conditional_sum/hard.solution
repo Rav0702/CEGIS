@@ -1,6 +1,8 @@
 Problem: conditional_sum
 Difficulty: hard
-Status: cegis_failure
-Iterations: 4
-Counterexamples: 4
-Solution: ifelse(z < 15, 0, z)
+Type: DEBUG SOLUTION (Expected)
+Status: ERROR: typename(ErrorException)
+Solution: ifelse(and(x > 0, y > 0, z > 0, (x + y + z) > 20), x + y + z, ifelse(and(x > 0, y > 0, (x + y) > 15), x + y, ifelse(and(x > 0, x >= 10), x, ifelse(and(y > 0, y >= 10), y, ifelse(and(z > 0, z >= 10), z, 0)))))
+
+Verification Result:
+    ⚠ ERROR: typename(ErrorException)

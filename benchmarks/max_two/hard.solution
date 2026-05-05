@@ -1,6 +1,9 @@
 Problem: max_two
 Difficulty: hard
-Status: cegis_success
-Iterations: 0
-Counterexamples: 0
-Solution: y
+Type: DEBUG SOLUTION (Expected)
+Status: VERIFIED
+Solution: ifelse(x > y, x, y)
+
+Verification Result:
+    ✓ VERIFIED: All constraints satisfied
+Z3 Status: unsat

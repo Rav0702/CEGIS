@@ -1,0 +1,6 @@
+Problem: find_max_three
+Difficulty: easy
+Status: cegis_failure
+Iterations: 7
+Counterexamples: 7
+Solution: (1 >= y * x) - 1

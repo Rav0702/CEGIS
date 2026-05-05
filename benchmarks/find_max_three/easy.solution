@@ -1,6 +1,9 @@
 Problem: find_max_three
 Difficulty: easy
-Status: cegis_failure
-Iterations: 7
-Counterexamples: 7
-Solution: (1 >= y * x) - 1
+Type: DEBUG SOLUTION (Expected)
+Status: VERIFIED
+Solution: ifelse(x >= y, ifelse(x >= z, x, z), ifelse(y >= z, y, z))
+
+Verification Result:
+    ✓ VERIFIED: All constraints satisfied
+Z3 Status: unsat

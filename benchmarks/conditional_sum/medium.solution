@@ -1,6 +1,8 @@
 Problem: conditional_sum
 Difficulty: medium
-Status: cegis_failure
-Iterations: 3
-Counterexamples: 3
-Solution: 0 - (x < y)
+Type: DEBUG SOLUTION (Expected)
+Status: ERROR: typename(ErrorException)
+Solution: ifelse(and(x > 0, y > 0, (x + y) >= 15), x + y, ifelse(and(x > 0, y <= 0, x >= 7), x, ifelse(and(x <= 0, y > 0, y >= 7), y, 0)))
+
+Verification Result:
+    ⚠ ERROR: typename(ErrorException)

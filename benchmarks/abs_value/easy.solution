@@ -1,6 +1,8 @@
 Problem: abs_value
 Difficulty: easy
-Status: cegis_success
-Iterations: 4
-Counterexamples: 4
-Solution: ifelse(x < 0, 0 - x, x)
+Type: DEBUG SOLUTION (Expected)
+Status: ERROR: typename(ErrorException)
+Solution: ifelse(x >= 0, x, -(x))
+
+Verification Result:
+    ⚠ ERROR: typename(ErrorException)

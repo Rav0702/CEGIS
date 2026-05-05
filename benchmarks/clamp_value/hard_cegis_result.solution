@@ -1,0 +1,6 @@
+Problem: clamp_value
+Difficulty: hard
+Status: cegis_failure
+Iterations: 6
+Counterexamples: 6
+Solution: (hard_max < 0 - soft_min) * soft_min

@@ -1,0 +1,6 @@
+Problem: clamp_value
+Difficulty: medium
+Status: cegis_success
+Iterations: 5
+Counterexamples: 5
+Solution: ifelse(max_val < x, max_val, x)

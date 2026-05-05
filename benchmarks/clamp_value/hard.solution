@@ -1,6 +1,25 @@
 Problem: clamp_value
 Difficulty: hard
-Status: cegis_failure
-Iterations: 6
-Counterexamples: 6
-Solution: (hard_max < 0 - soft_min) * soft_min
+Type: DEBUG SOLUTION (Expected)
+Status: VIOLATED
+Solution: ifelse(x < soft_min, soft_min, ifelse(x > soft_max, soft_max, ifelse(x < hard_min, hard_min, ifelse(x > hard_max, hard_max, x))))
+
+Verification Result:
+    ✗ VIOLATED: Found counterexample
+      Counterexample model:
+        y = 0
+        soft_max = -1
+        hard_max = 0
+        x = 1
+        hard_min = -1
+        out_adaptive_clamp = 0
+        soft_min = 1
+Z3 Status: sat
+Z3 Model:
+  y = 0
+  soft_max = -1
+  hard_max = 0
+  x = 1
+  hard_min = -1
+  out_adaptive_clamp = 0
+  soft_min = 1
