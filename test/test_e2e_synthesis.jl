@@ -5,7 +5,23 @@ Each test loads a specification file, builds a grammar, and runs the CEGIS
 synthesis loop to verify that the tool can find solutions or recognize known limitations.
 """
 
-@testset "E2E Synthesis on Simple Specifications" verbose = true begin
+using ReTestItems
+using CEGIS
+using HerbCore
+using HerbGrammar
+using HerbInterpret
+using HerbSearch
+using HerbSpecification
+using Test
+
+@testitem "E2E Synthesis on Simple Specifications" begin
+    using CEGIS
+    using HerbCore
+    using HerbGrammar
+    using HerbInterpret
+    using HerbSearch
+    using HerbSpecification
+    include(joinpath(@__DIR__, "test_helpers.jl"))
     
     @testset "Arithmetic (2*x + y)" begin
         spec_path = find_spec_file("arith_simple")

@@ -25,7 +25,8 @@ problem = CEGISProblem("spec.json"; spec_parser=JSONSpecParser())
 ```
 """
 
-using CEGIS.CEXGeneration: Spec
+import ..CEXGeneration
+using ..CEXGeneration: Spec
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Abstract interface
@@ -115,7 +116,5 @@ spec = parse_spec(SyGuSParser(), "benchmarks/max.sl")
 """
 function parse_spec(::SyGuSParser, path::String)
     # Delegate to CEXGeneration's existing SyGuS parser
-    # Access CEXGeneration through Main which has the fully constructed CEGIS module
-    cexgen = getfield(Main, :CEGIS) |> m -> getfield(m, :CEXGeneration)
-    return cexgen.parse_spec_from_file(path)
+    return CEXGeneration.parse_spec_from_file(path)
 end

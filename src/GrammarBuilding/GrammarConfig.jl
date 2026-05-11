@@ -537,8 +537,8 @@ function eval_grammar_string(grammar_str::String) :: AbstractGrammar
         # Parse the grammar string as Julia code
         expr = Meta.parse(grammar_str)
         
-        # Evaluate in Main module context (where @csgrammar macro is available)
-        grammar = Core.eval(Main, expr)
+        # Evaluate in HerbGrammar module context (where @csgrammar is defined)
+        grammar = Core.eval(HerbGrammar, expr)
         
         return grammar
     catch e

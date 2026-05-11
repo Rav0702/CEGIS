@@ -8,6 +8,8 @@ Tests critical methods used in e2e synthesis:
   - Iterator configuration
 """
 
+using ReTestItems
+using CEGIS
 using HerbCore
 using HerbGrammar
 using HerbInterpret
@@ -15,14 +17,14 @@ using HerbSearch
 using HerbSpecification
 using Test
 
-const CEGIS_ROOT = dirname(@__DIR__)
-const CEGIS_SRC = joinpath(CEGIS_ROOT, "src")
-push!(LOAD_PATH, CEGIS_SRC)
-include(joinpath(CEGIS_SRC, "CEGIS.jl"))
-
-include("test_helpers.jl")
-
-@testset "CEGIS Parsing & Utilities" verbose = true begin
+@testitem "CEGIS Parsing & Utilities" begin
+    using CEGIS
+    using HerbCore
+    using HerbGrammar
+    using HerbInterpret
+    using HerbSearch
+    using HerbSpecification
+    include(joinpath(@__DIR__, "test_helpers.jl"))
 
     # ─────────────────────────────────────────────────────────────────────────────
     # Test: find_spec_file

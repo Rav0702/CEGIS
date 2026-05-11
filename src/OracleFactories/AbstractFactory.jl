@@ -29,6 +29,8 @@ problem = CEGISProblem("spec.sl"; oracle_factory=CustomOracleFactory())
 
 using HerbCore
 using HerbGrammar
+import ..CEXGeneration
+import ..Z3Oracle
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Abstract interface
@@ -70,9 +72,7 @@ struct Z3OracleFactory <: AbstractOracleFactory
         use_direct_conversion :: Bool = false
     )
         if parser === nothing
-            # Get default parser from CEXGeneration at runtime via Main
-            cexgen = getfield(Main, :CEGIS) |> m -> getfield(m, :CEXGeneration)
-            parser = cexgen.get_default_candidate_parser()
+            parser = CEXGeneration.get_default_candidate_parser()
         end
         new(parser, mod, use_direct_conversion)
     end
@@ -88,12 +88,8 @@ function create_oracle(factory::Z3OracleFactory, spec::Any, grammar::AbstractGra
     if hasfield(typeof(spec), :file_path) && !isempty(spec.file_path)
         file_path = spec.file_path
         
-        # Access Z3Oracle type - it's exported from CEGIS module
-        cegis_module = getfield(Main, :CEGIS)
-        Z3OracleType = getfield(cegis_module, :Z3Oracle)
-        
         # Create Z3Oracle with the spec file path
-        return Z3OracleType(
+        return Z3Oracle(
             file_path,
             grammar;
             mod = factory.mod,
