@@ -6,6 +6,7 @@ using HerbConstraints
 using HerbInterpret
 using HerbSearch
 using HerbSpecification
+using Arborist
 
 # ── local includes (order matters: types first) ───────────────────────────────
 include("types.jl")
@@ -17,6 +18,7 @@ include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses Abs
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
+include("GeneticSearch/GeneticSearch.jl") # Z3-guided genetic synthesis POC (uses Arborist)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
@@ -29,6 +31,7 @@ export
     GrammarBuilding,
     OracleFactories,
     IteratorConfig,
+    GeneticSearch,
     
     # Types
     CEGISProblem,
