@@ -15,6 +15,7 @@ using HerbSearch
 
 # Include abstract base type and implementations
 include("AbstractIterator.jl")
+include("BottomUpIterator.jl")
 
 # Export public API
 export
@@ -22,6 +23,8 @@ export
     BFSIteratorConfig,
     DFSIteratorConfig,
     RandomSearchIteratorConfig,
+    BottomUpIteratorConfig,
+    rule_costs_with_bias,
     create_iterator
 
 end # module IteratorConfig

@@ -13,6 +13,7 @@ include("CEXGeneration/CEXGeneration.jl") # CEXGeneration module (needed by Z3Or
 include("Oracles/Oracles.jl") # Oracle implementations & abstract interface (must be before OracleFactories)
 include("Parsers/Parsers.jl") # Spec parsers (extensible)
 include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
+include("EGraphPruning/EGraphPruning.jl") # E-graph-derived grammar constraints (equality saturation)
 include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses AbstractOracle)
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("counterexample.jl")
@@ -27,6 +28,7 @@ export
     CEXGeneration,
     Parsers,
     GrammarBuilding,
+    EGraphPruning,
     OracleFactories,
     IteratorConfig,
     
