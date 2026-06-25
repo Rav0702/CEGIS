@@ -310,3 +310,73 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     
     join(query_parts, "\n") * "\n"
 end
+
+"""
+    _candidate_query_header(spec, candidate_exprs) :: Vector{String}
+
+Shared prefix for candidate-based queries: logic, preamble (sorts/helpers/
+uninterpreted functions), free-variable declarations, and the candidate
+`define-fun`s. Used by both the counterexample query and the partial-satisfaction
+query so a candidate is interpreted identically in either.
+"""
+function _candidate_query_header(spec::Spec, candidate_exprs::Dict{String,String})::Vector{String}
+    parts = String[]
+    push!(parts, "(set-logic $(spec.logic))")
+    push!(parts, "(set-option :model.completion true)")
+
+    if !isempty(spec.ordered_preamble)
+        push!(parts, "; ── preamble (sorts, helpers, uninterpreted functions) ──")
+        append!(parts, spec.ordered_preamble)
+    end
+
+    for fv in spec.free_vars
+        push!(parts, "(declare-const $(fv.name) $(fv.sort))")
+    end
+
+    for sfun in spec.synth_funs
+        candidate = get(candidate_exprs, sfun.name, nothing)
+        candidate === nothing && continue
+        param_names = [pname for (pname, _) in sfun.params]
+        free_var_names = [fv.name for fv in spec.free_vars]
+        candidate_subst = substitute_params(candidate, param_names, free_var_names)
+        if sfun.sort == "Int" && _looks_like_bool(candidate_subst)
+            candidate_subst = _wrap_bool_to_int(candidate_subst)
+        end
+        param_decls = join(["($(pname) $(sort))" for (pname, sort) in sfun.params], " ")
+        push!(parts, "(define-fun $(sfun.name) ($param_decls) $(sfun.sort) $candidate_subst)")
+    end
+    return parts
+end
+
+"""
+    generate_partial_sat_query(spec, candidate_exprs, constraint) :: String
+
+Build an SMT-LIB2 query that checks whether `candidate_exprs` satisfies a
+**single** spec `constraint` for *all* inputs.
+
+The candidate is installed as `define-fun`s and the query asserts the negation
+of the constraint:
+
+  - **unsat** ⟹ the constraint holds for every input — the candidate *satisfies* it.
+  - **sat**   ⟹ there is an input violating it; the model is a violating input
+    (a counterexample witnessing that this particular constraint is unmet).
+
+Running one such query per constraint and counting the `unsat` results yields the
+partial-satisfaction score (how many constraints a candidate meets). Constraints
+already call the synthesis function by name, so once it is defined the negated
+constraint is self-contained — no fresh-constant substitution is needed.
+"""
+function generate_partial_sat_query(spec::Spec,
+                                    candidate_exprs::Dict{String,String},
+                                    constraint::AbstractString)::String
+    query_parts = _candidate_query_header(spec, candidate_exprs)
+    push!(query_parts, "")
+    push!(query_parts, "; satisfied iff this is unsat (constraint holds for all inputs)")
+    push!(query_parts, "(assert (not $constraint))")
+    push!(query_parts, "(check-sat)")
+    if !isempty(spec.free_vars)
+        var_list = join([fv.name for fv in spec.free_vars], " ")
+        push!(query_parts, "(get-value ($var_list))")
+    end
+    return join(query_parts, "\n") * "\n"
+end

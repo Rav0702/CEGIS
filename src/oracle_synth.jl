@@ -69,7 +69,8 @@ function run_synthesis(
     max_enumerations::Int = typemax(Int),
     mod::Module = Main,
     eval_fn::Union{Function, Nothing} = nothing,
-    use_direct_conversion::Bool = false) :: CEGISResult
+    use_direct_conversion::Bool = false,
+    log_every::Int = 0) :: CEGISResult
     
     # Extract grammar from iterator
     grammar = HerbSearch.get_grammar(iterator)
@@ -96,8 +97,9 @@ function run_synthesis(
         iterator = iterator,
         desired_solution = problem.desired_solution,
         eval_fn = eval_fn,
+        log_every = log_every,
     )
-    
+
     return result_tuple.result
 end
 
@@ -145,7 +147,8 @@ function synth_with_oracle(
     shortcircuit::Bool=true, allow_evaluation_errors::Bool=false, mod::Module=Main,
     iterator::Union{Any, Nothing}=nothing,
     desired_solution::Union{String, Nothing}=nothing,
-    eval_fn::Union{Function, Nothing}=nothing
+    eval_fn::Union{Function, Nothing}=nothing,
+    log_every::Int=0
 )
     start_time = time()
     termination_reason = "iterator_exhausted"
@@ -181,7 +184,12 @@ function synth_with_oracle(
 
     for candidate_program in iterator
         num_enum += 1
-        
+
+        if log_every > 0 && num_enum % log_every == 0
+            elapsed = round(time() - start_time, digits=1)
+            println("[progress] enum=$num_enum  cex=$(length(counterexamples))  best_satisfied=$global_best_satisfied  elapsed=$(elapsed)s")
+        end
+
         if num_enum > max_enumerations
             println("[enum=$num_enum] Reached max_enumerations limit ($max_enumerations)")
             termination_reason = "max_enumerations"

@@ -10,6 +10,7 @@ using HerbSpecification
 # ── local includes (order matters: types first) ───────────────────────────────
 include("types.jl")
 include("CEXGeneration/CEXGeneration.jl") # CEXGeneration module (needed by Z3Oracle)
+include("PartialSat/PartialSat.jl") # Partial-specification-satisfaction evaluation & guided search (uses CEXGeneration)
 include("Oracles/Oracles.jl") # Oracle implementations & abstract interface (must be before OracleFactories)
 include("Parsers/Parsers.jl") # Spec parsers (extensible)
 include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
@@ -25,6 +26,7 @@ include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 export
     # Support modules (extensible architecture)
     CEXGeneration,
+    PartialSat,
     Parsers,
     GrammarBuilding,
     OracleFactories,

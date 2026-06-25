@@ -24,6 +24,7 @@ Converts SyGuS-v2 specifications and candidate solutions to SMT-LIB2 queries for
 module CEXGeneration
 
 export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
+       generate_partial_sat_query,
        candidate_to_smt2, serialize_spec, deserialize_spec,
        verify_query, Z3Result, format_result,
        AbstractCandidateParser, InfixCandidateParser, SymbolicCandidateParser,
