@@ -28,7 +28,9 @@ export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        verify_query, Z3Result, format_result,
        AbstractCandidateParser, InfixCandidateParser, SymbolicCandidateParser,
        to_smt2, set_default_candidate_parser, get_default_candidate_parser,
-       rulenode_to_smt2
+       rulenode_to_smt2,
+       ConstraintSatResult, generate_satisfaction_query, check_constraint_satisfaction,
+       n_satisfied, all_satisfied, satisfied_indices, violated_indices
 
 using Z3
 
@@ -38,6 +40,7 @@ include("parser.jl")
 include("candidates.jl")
 include("query.jl")
 include("z3_verify.jl")
+include("constraint_satisfaction.jl")
 include("rulenode_to_smt.jl")
 
 """
