@@ -1,0 +1,43 @@
+max4 per-constraint Z3 verification
+spec: C:\Users\rafal\.julia\dev\CEGIS\spec_files\phase3_benchmarks\max4_simple.sl
+
+============================================================
+CANDIDATE: correct_nested_max
+  body = (ite (>= (ite (>= x0 x1) x0 x1) (ite (>= x2 x3) x2 x3)) (ite (>= x0 x1) x0 x1) (ite (>= x2 x3) x2 x3))
+  constraint 1: ok (unsat)
+  constraint 2: ok (unsat)
+  constraint 3: ok (unsat)
+  constraint 4: ok (unsat)
+  constraint 5: ok (unsat)
+  => CORRECT (0 violations)
+
+============================================================
+CANDIDATE: just_x0
+  body = x0
+  constraint 1: ok (unsat)
+  constraint 2: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 3: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 4: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 5: ok (unsat)
+  => 3/5 constraints violated
+
+============================================================
+CANDIDATE: max_of_first_three
+  body = (ite (>= (ite (>= x0 x1) x0 x1) x2) (ite (>= x0 x1) x0 x1) x2)
+  constraint 1: ok (unsat)
+  constraint 2: ok (unsat)
+  constraint 3: ok (unsat)
+  constraint 4: VIOLATED (sat)  witness: x0=0 x1=0 x2=0 x3=1
+  constraint 5: ok (unsat)
+  => 1/5 constraints violated
+
+============================================================
+CANDIDATE: sum_all
+  body = (+ (+ x0 x1) (+ x2 x3))
+  constraint 1: VIOLATED (sat)  witness: x0=0 x1=-1 x2=0 x3=0
+  constraint 2: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 3: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 4: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=0
+  constraint 5: VIOLATED (sat)  witness: x0=-1 x1=0 x2=0 x3=-1
+  => 5/5 constraints violated
+

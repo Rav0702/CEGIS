@@ -74,6 +74,19 @@ A self-contained sub-module that handles SyGuS v2 `.sl` parsing and SMT-LIB2 que
 - `verify_query(query::String) → Z3Result` — Runs Z3 on the query; returns `Z3Result` with `.status ∈ {:sat, :unsat, :unknown}` and `.model`.
 - `rulenode_to_smt2(node, grammar) → String` — Direct `RuleNode → SMT-LIB2` conversion with type tracking (`:int` / `:bool`); applies `(ite cond 1 0)` for Bool→Int coercion.
 
+### Genetic Search & CDGP (`src/GeneticSearch/`)
+
+Genetic synthesis over `RuleNode` programs using Arborist as the GA engine. Two fitness modes:
+
+- **Graded constraint fitness** (`Z3GradedEvaluator`, `run_ga_cegis`) — fitness = number of spec constraints violated universally (each checked with its own Z3 query); `0` ⇒ formally verified, so no outer CEGIS loop.
+- **CDGP test-case fitness** (`CDGPEvaluator`, `run_cdgp`) — classic counterexample-driven GP: fitness = failed tests on an accumulated counterexample-derived set; Z3 only verifies test-perfect candidates.
+
+`scripts/run_cdgp_benchmarks.jl` runs `run_cdgp` across the max2–max5 specs and re-verifies each solution with Z3.
+
+`run_cdgp` takes an opt-in `selection=` kwarg (defaults to tournament; pass `Arborist.LexicaseSelection()` for lexicase, backed by `CDGPEvaluator`'s `evaluate_cases`). `scripts/run_cdgp_benchmarks.jl` compares the two.
+
+> **Status / gaps vs. the paper:** see [`CDGP_ANALYSIS.md`](CDGP_ANALYSIS.md). Summary: faithful core loop and sound acceptance, lexicase now implemented; remaining gaps are **complete-tests-only** (no output-uniqueness check) and weak handling of relational / multi-invocation specs.
+
 ### Grammar Building (`src/GrammarBuilding/`)
 
 `build_generic_grammar(spec, config::GrammarConfig)` generates a `@csgrammar` string dynamically and evaluates it in `HerbGrammar` context.

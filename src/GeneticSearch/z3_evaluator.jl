@@ -75,16 +75,18 @@ function Arborist.output_signature(e::Z3GradedEvaluator)::Dict{Symbol,DataType}
 end
 
 """Map a Z3 model (free-var names → values) to a synth-fun-param-keyed input."""
-function _model_to_input(e::Z3GradedEvaluator, model::Dict{String,Any})::Dict{Symbol,Any}
-    sf = e.spec.synth_funs[1]
+function _model_to_input(spec, model::Dict{String,Any})::Dict{Symbol,Any}
+    sf = spec.synth_funs[1]
     pnames = [p for (p, _) in sf.params]
-    fvs = e.spec.free_vars
+    fvs = spec.free_vars
     input = Dict{Symbol,Any}()
     for i in 1:min(length(pnames), length(fvs))
         input[Symbol(pnames[i])] = get(model, fvs[i].name, 0)
     end
     return input
 end
+
+_model_to_input(e::Z3GradedEvaluator, model::Dict{String,Any}) = _model_to_input(e.spec, model)
 
 """
     evaluate_genome(g::RuleNodeGenome, e::Z3GradedEvaluator) -> Float64
