@@ -166,6 +166,11 @@ function extract_counterexample(
             end
         end
         
+        # If sat, report which individual constraints the candidate violates here
+        if result.status == :sat && !isempty(result.violated_constraints)
+            println("  Constraints violated at counterexample: $(result.violated_constraints)")
+        end
+
         # If unsat, print the unsatisfiable core
         if result.status == :unsat && !isempty(result.unsat_core)
             println("  Unsatisfiable Core (minimal constraints proving validity):")

@@ -71,8 +71,11 @@ A self-contained sub-module that handles SyGuS v2 `.sl` parsing and SMT-LIB2 que
 
 - `parse_spec_from_file(path) → Spec` — Parses `.sl` into `Spec` (contains `synth_funs`, `free_vars`, `constraints`, `logic`).
 - `generate_cex_query(spec, candidates::Dict{String,String}) → String` — Builds a complete SMT-LIB2 check-sat query with candidate substituted for the synthesis target.
-- `verify_query(query::String) → Z3Result` — Runs Z3 on the query; returns `Z3Result` with `.status ∈ {:sat, :unsat, :unknown}` and `.model`.
+- `verify_query(query::String) → Z3Result` — Runs Z3 on the query; returns `Z3Result` with `.status ∈ {:sat, :unsat, :unknown}`, `.model`, `.unsat_core`, and `.violated_constraints` (1-based indices of constraints the candidate breaks *at the SAT counterexample*).
+- `generate_graded_query(spec, candidates) → String` / `verify_graded_query(query) → Vector{ConstraintResult}` — One Z3 call that checks **every** constraint independently (push/pop per constraint); `:unsat` per entry ⇒ satisfied for all inputs. Basis of the graded GA fitness.
 - `rulenode_to_smt2(node, grammar) → String` — Direct `RuleNode → SMT-LIB2` conversion with type tracking (`:int` / `:bool`); applies `(ite cond 1 0)` for Bool→Int coercion.
+
+Z3 runs **in-process** by default via `Z3_eval_smtlib2_string` (`_z3_eval`); set `CEGIS_Z3_SUBPROCESS=1` to fall back to the `z3` subprocess (`_z3_run`). See [`Z3_CONSTRAINT_CHECKING.md`](Z3_CONSTRAINT_CHECKING.md) for the constraint-checking queries, per-constraint attribution, and in-process backend details.
 
 ### Genetic Search & CDGP (`src/GeneticSearch/`)
 

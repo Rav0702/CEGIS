@@ -76,3 +76,112 @@ function generate_constraint_check_query(
 
     return join(parts, "\n") * "\n"
 end
+
+# ── One-query graded check ──────────────────────────────────────────────────────
+#
+# `generate_constraint_check_query` answers ONE constraint per Z3 invocation, so the
+# graded evaluator pays N process spawns (and re-parses the preamble N times) per
+# candidate. `generate_graded_query` collapses all N checks into a *single* query by
+# emitting the candidate/preamble once and then probing each constraint inside its
+# own `(push)`/`(pop)` scope. One Z3 process, N independent (universal) verdicts —
+# semantically identical to the N-query loop, just far cheaper.
+
+"""
+    ConstraintResult
+
+Per-constraint verdict from `verify_graded_query`.
+
+- `status`  — `:unsat` ⇒ candidate satisfies the constraint for **all** inputs;
+              `:sat` ⇒ violated; `:unknown` ⇒ Z3 gave up (treat conservatively).
+- `witness` — free-var counterexample (`name → value`) when `:sat`, else empty.
+"""
+struct ConstraintResult
+    status::Symbol
+    witness::Dict{String,Any}
+end
+
+"""
+    generate_graded_query(spec::Spec, candidate_exprs::Dict{String,String}) :: String
+
+Build a single SMT-LIB2 query that checks **every** constraint of `spec`
+independently. The candidate is inlined once as a `define-fun`; each constraint is
+negated inside a `(push)`/`(pop)` so the checks don't interfere. The emitted
+`(check-sat)` results appear in `spec.constraints` order (parse with
+`verify_graded_query`).
+"""
+function generate_graded_query(spec::Spec, candidate_exprs::Dict{String,String})::String
+    isa(spec, Spec) || error("spec is not a Spec object: $(typeof(spec))")
+
+    parts = String[]
+    push!(parts, "(set-logic $(spec.logic))")
+    push!(parts, "(set-option :model.completion true)")
+
+    for item in spec.ordered_preamble
+        push!(parts, item)
+    end
+    for fv in spec.free_vars
+        push!(parts, "(declare-const $(fv.name) $(fv.sort))")
+    end
+    for sfun in spec.synth_funs
+        candidate = get(candidate_exprs, sfun.name, nothing)
+        candidate === nothing && continue
+        param_names    = [pname for (pname, _) in sfun.params]
+        free_var_names = [fv.name for fv in spec.free_vars]
+        body = substitute_params(candidate, param_names, free_var_names)
+        if sfun.sort == "Int" && _looks_like_bool(body)
+            body = _wrap_bool_to_int(body)
+        end
+        param_decls = join(["($(pname) $(sort))" for (pname, sort) in sfun.params], " ")
+        push!(parts, "(define-fun $(sfun.name) ($param_decls) $(sfun.sort) $body)")
+    end
+
+    var_list = isempty(spec.free_vars) ? "" : join([fv.name for fv in spec.free_vars], " ")
+    for (idx, c) in enumerate(spec.constraints)
+        push!(parts, "(push 1)")
+        push!(parts, "(assert (not $c))")  # sat ⇒ constraint $idx violated somewhere
+        push!(parts, "(check-sat)")
+        isempty(var_list) || push!(parts, "(get-value ($var_list))")
+        push!(parts, "(pop 1)")
+    end
+
+    return join(parts, "\n") * "\n"
+end
+
+"""
+    verify_graded_query(query::String) :: Vector{ConstraintResult}
+
+Run a `generate_graded_query` string through one Z3 call and parse the per-constraint
+`(check-sat)` results in order. On `:sat`, the `(get-value …)` block that follows is
+captured as the constraint's witness; on `:unsat`/`:unknown` Z3's `model is not
+available` error line is harmlessly skipped.
+"""
+function verify_graded_query(query::String)::Vector{ConstraintResult}
+    out = _z3_solve(query)
+
+    results   = ConstraintResult[]
+    status    = Ref{Union{Symbol,Nothing}}(nothing)
+    buf       = String[]
+    flush!() = begin
+        s = status[]
+        s === nothing && return
+        if s == :sat
+            push!(results, ConstraintResult(:sat, _parse_get_value_output(join(buf, "\n"))))
+        else
+            push!(results, ConstraintResult(s, Dict{String,Any}()))
+        end
+    end
+
+    for raw in split(out, '\n')
+        line = strip(raw)
+        isempty(line) && continue
+        if line in ("sat", "unsat", "unknown")
+            flush!()
+            status[] = Symbol(line)
+            empty!(buf)
+        else
+            push!(buf, raw)  # get-value model lines (or skippable error blocks)
+        end
+    end
+    flush!()
+    return results
+end

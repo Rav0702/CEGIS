@@ -32,4 +32,6 @@ CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCan
     include("test_parsing_utilities.jl")
     include("test_e2e_synthesis.jl")
     include("test_cdgp.jl")
+    include("test_constraint_failure_attribution.jl")
+    include("test_inprocess_z3.jl")
 end

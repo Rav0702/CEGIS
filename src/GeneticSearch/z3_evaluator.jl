@@ -109,26 +109,28 @@ function Arborist.evaluate_genome(g::RuleNodeGenome, e::Z3GradedEvaluator)::Floa
     end
 
     cands = Dict(e.func_name => smt)
+    # One Z3 call checks every constraint (push/pop per constraint) instead of N.
+    results = try
+        CEXGeneration.verify_graded_query(CEXGeneration.generate_graded_query(e.spec, cands))
+    catch
+        CEXGeneration.ConstraintResult[]
+    end
+
     nviol = 0
     first_idx = 0
     witness = Dict{Symbol,Any}()
 
     for i in 1:e.n_constraints
-        q = CEXGeneration.generate_constraint_check_query(e.spec, cands, i)
-        r = try
-            CEXGeneration.verify_query(q)
-        catch
-            CEXGeneration.Z3Result(:unknown, Dict{String,Any}(), String[])
-        end
-
-        if r.status == :sat
+        # A short/missing result (parse hiccup, ill-typed candidate) is treated
+        # conservatively as a violation, matching the old per-query :unknown path.
+        status = i <= length(results) ? results[i].status : :unknown
+        if status == :sat
             nviol += 1
             if first_idx == 0
                 first_idx = i
-                witness = _model_to_input(e, r.model)
+                witness = _model_to_input(e, results[i].witness)
             end
-        elseif r.status == :unknown
-            # Conservatively treat unknown (often an ill-typed candidate) as a violation.
+        elseif status == :unknown
             nviol += 1
             first_idx == 0 && (first_idx = i)
         end

@@ -278,7 +278,20 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     else
         push!(query_parts, "(assert false)   ; no constraints to verify")
     end
-    
+
+    # Per-constraint violation indicators. One Bool per spec constraint, evaluated
+    # over the *candidate* (the constraint's (f ...) calls expand to the candidate
+    # define-fun above). On SAT these are read back with get-value: `false` ⇒ the
+    # candidate violates that constraint *at the counterexample point*. The index
+    # `idx` matches the position in `spec.constraints` (1-based).
+    if !isempty(spec.constraints)
+        push!(query_parts, "")
+        push!(query_parts, "; Per-constraint indicators for failure attribution on SAT")
+        for (idx, constraint) in enumerate(spec.constraints)
+            push!(query_parts, "(define-fun cand_c_$(idx) () Bool $constraint)")
+        end
+    end
+
     push!(query_parts, "")
     push!(query_parts, "(check-sat)")
     push!(query_parts, "(get-unsat-core)")
@@ -307,6 +320,14 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
             push!(query_parts, "(get-value ($fresh_name))")
         end
     end
-    
+
+    # Which individual constraints the candidate violates at the counterexample.
+    if !isempty(spec.constraints)
+        push!(query_parts, "")
+        push!(query_parts, "; Per-constraint truth values (false ⇒ violated by candidate)")
+        cand_list = join(["cand_c_$(idx)" for idx in 1:length(spec.constraints)], " ")
+        push!(query_parts, "(get-value ($cand_list))")
+    end
+
     join(query_parts, "\n") * "\n"
 end

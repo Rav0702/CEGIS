@@ -28,7 +28,8 @@ export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        verify_query, Z3Result, format_result,
        AbstractCandidateParser, InfixCandidateParser, SymbolicCandidateParser,
        to_smt2, set_default_candidate_parser, get_default_candidate_parser,
-       rulenode_to_smt2, generate_constraint_check_query
+       rulenode_to_smt2, generate_constraint_check_query,
+       generate_graded_query, verify_graded_query, ConstraintResult
 
 using Z3
 
