@@ -190,6 +190,19 @@ function check_constraint_satisfaction(
     n = length(spec.constraints)
     n == 0 && return ConstraintSatResult(String[], Bool[], Symbol[])
 
+    # Opt-in (CEGIS_CSAT_INPROCESS=1): run Method 2 on a persistent in-process
+    # Z3.Solver instead of spawning a z3 subprocess. Falls back to the subprocess
+    # path if the spec is outside the in-process scope (non-canonical application).
+    if get(ENV, "CEGIS_CSAT_INPROCESS", "0") == "1"
+        css = try
+            ConstraintSatSolver(spec)
+        catch err
+            @debug "in-process ConstraintSatSolver unavailable; using subprocess" err
+            nothing
+        end
+        css === nothing || return check_constraint_satisfaction(css, candidate_exprs)
+    end
+
     query = generate_satisfaction_query(spec, candidate_exprs)
     out, exitcode, err_msg = _z3_exec(query)
 

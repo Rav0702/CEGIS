@@ -30,7 +30,8 @@ export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        to_smt2, set_default_candidate_parser, get_default_candidate_parser,
        rulenode_to_smt2,
        ConstraintSatResult, generate_satisfaction_query, check_constraint_satisfaction,
-       n_satisfied, all_satisfied, satisfied_indices, violated_indices
+       n_satisfied, all_satisfied, satisfied_indices, violated_indices,
+       ConstraintSatSolver
 
 using Z3
 
@@ -41,6 +42,7 @@ include("candidates.jl")
 include("query.jl")
 include("z3_verify.jl")
 include("constraint_satisfaction.jl")
+include("constraint_satisfaction_solver.jl")
 include("rulenode_to_smt.jl")
 
 """
