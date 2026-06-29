@@ -73,7 +73,7 @@ function benchmark(k::Int; n::Int=120, depth::Int=4, seed::Int=1)
 end
 
 function main()
-    benchmark(4; n=30, depth=4)
+    benchmark(4; n=1, depth=4)
    # benchmark(5; n=120, depth=4)
     println("\n", "="^72)
 end
