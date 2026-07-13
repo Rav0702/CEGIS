@@ -26,11 +26,16 @@ struct Z3Result
 end
 
 """
-Run z3 binary on a query string, return stdout as a String.
-Writes to a temp file to avoid shell quoting issues on Windows.
-On error, returns "unsat" status to allow execution to continue.
+Execute the z3 binary on a query string and return the raw result.
+
+Writes the query to a temp file (avoids shell quoting issues on Windows) and runs
+z3 with `ignorestatus`, so the caller decides how to interpret exit codes. This is
+the low-level primitive shared by `_z3_run` (single check-sat) and the constraint
+satisfaction checker (multiple check-sat-assuming in one process).
+
+Returns `(stdout, exitcode, stderr)` with stdout/stderr already stripped.
 """
-function _z3_run(query::String)::String
+function _z3_exec(query::String)::Tuple{String,Int,String}
     tmp = tempname() * ".smt2"
     try
         @debug "Z3: Writing query to temp file" tmp
@@ -41,28 +46,38 @@ function _z3_run(query::String)::String
         err = IOBuffer()
         # ignorestatus: don't throw on non-zero exit code (Z3 exits 1 for unsat)
         proc = run(pipeline(ignorestatus(`z3 $tmp`); stdout=out, stderr=err); wait=true)
-        result = strip(String(take!(out)))
+        result  = strip(String(take!(out)))
+        err_msg = strip(String(take!(err)))
 
         @debug "Z3: Subprocess completed" exit_code=proc.exitcode result_preview=first(result, min(length(result), 80))
-
-        # Check result first—if it starts with unsat or sat, it's valid regardless of exit code
-        if startswith(result, "unsat") || startswith(result, "sat")
-            return result
-        end
-
-        # If exit code is non-zero and result doesn't start with unsat/sat, it's a real error
-        if proc.exitcode != 0
-            err_msg = strip(String(take!(err)))
-            error("Z3 failed with exit code $(proc.exitcode):\n$err_msg\nStdout: $result")
-        end
-
-        return result
+        return (String(result), proc.exitcode, String(err_msg))
     catch e
         @debug "Z3: Unexpected Julia-level exception" exception=e
         rethrow()
     finally
         isfile(tmp) && rm(tmp)
     end
+end
+
+"""
+Run z3 binary on a query string, return stdout as a String.
+Writes to a temp file to avoid shell quoting issues on Windows.
+On error, returns "unsat" status to allow execution to continue.
+"""
+function _z3_run(query::String)::String
+    result, exitcode, err_msg = _z3_exec(query)
+
+    # Check result first—if it starts with unsat or sat, it's valid regardless of exit code
+    if startswith(result, "unsat") || startswith(result, "sat")
+        return result
+    end
+
+    # If exit code is non-zero and result doesn't start with unsat/sat, it's a real error
+    if exitcode != 0
+        error("Z3 failed with exit code $(exitcode):\n$err_msg\nStdout: $result")
+    end
+
+    return result
 end
 
 """
