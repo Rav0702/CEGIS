@@ -30,5 +30,7 @@ CEGIS.CEXGeneration.set_default_candidate_parser(CEGIS.CEXGeneration.SymbolicCan
 
 @testset "CEGIS.jl" verbose = true begin
     include("test_parsing_utilities.jl")
+    include("test_constraint_satisfaction.jl")
+    include("test_constraint_satisfaction_solver.jl")
     include("test_e2e_synthesis.jl")
 end
