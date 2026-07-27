@@ -7,26 +7,30 @@ using HerbInterpret
 using HerbSearch
 using HerbSpecification
 
-# ── local includes (order matters: types first) ───────────────────────────────
+# -- local includes (order matters: types first) -------------------------------
 include("types.jl")
 include("CEXGeneration/CEXGeneration.jl") # CEXGeneration module (needed by Z3Oracle)
+include("PartialSat/PartialSat.jl") # Partial-specification-satisfaction evaluation & guided search (uses CEXGeneration)
 include("Oracles/Oracles.jl") # Oracle implementations & abstract interface (must be before OracleFactories)
 include("Parsers/Parsers.jl") # Spec parsers (extensible)
 include("GrammarBuilding/GrammarBuilding.jl") # Grammar configuration and building
+include("EGraphPruning/EGraphPruning.jl") # E-graph-derived grammar constraints (equality saturation)
 include("OracleFactories/OracleFactories.jl") # Oracle factory pattern (uses AbstractOracle)
 include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Public API
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 export
     # Support modules (extensible architecture)
     CEXGeneration,
+    PartialSat,
     Parsers,
     GrammarBuilding,
+    EGraphPruning,
     OracleFactories,
     IteratorConfig,
     
