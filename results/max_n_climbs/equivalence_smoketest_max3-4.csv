@@ -1,0 +1,9 @@
+N,mode,round,reached,dropped,kept,drop_pct,sig_time_s,enumerated,scored,subsets,best_score,n_total,best_size,elapsed_s,solved
+3,observational,1,54,14,40,25.93,0.16,45,45,7,3,4,6,3.14,true
+3,observational,2,165,112,53,67.88,0.04,120,113,8,4,4,21,3.44,true
+3,constraint,1,54,40,14,74.07,0.02,45,45,7,3,4,6,0.07,true
+3,constraint,2,165,151,14,91.52,0.07,120,113,8,4,4,21,0.22,true
+4,observational,1,176,27,149,15.34,0.02,160,160,11,3,5,6,0.77,true
+4,observational,2,971,328,643,33.78,0.36,857,846,16,5,5,26,1.9,true
+4,constraint,1,176,152,24,86.36,0.09,160,160,11,3,5,6,0.2,true
+4,constraint,2,971,918,53,94.54,0.76,857,846,16,5,5,26,1.84,true

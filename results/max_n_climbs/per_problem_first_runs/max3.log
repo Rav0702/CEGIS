@@ -1,0 +1,91 @@
+
+========================================================================
+max3  (4 constraints)  —  spec /Users/howie/.julia/dev/CEGIS/benchmarks/max_n/max3.sl
+========================================================================
+   spec: 4 constraint(s), free vars x1, x2, x3
+     C1: (>= (max3 x1 x2 x3) x1)
+     C2: (>= (max3 x1 x2 x3) x2)
+     C3: (>= (max3 x1 x2 x3) x3)
+     C4: (or (= x1 (max3 x1 x2 x3)) (= x2 (max3 x1 x2 x3)) (= x3 (max3 x1 x2 x3)))
+   grammar: 6 rule(s), 3 terminal(s)
+     [ 1] Expr = x1
+     [ 2] Expr = x2
+     [ 3] Expr = x3
+     [ 4] Expr = ifelse(BoolExpr, Expr, Expr)
+     [ 5] BoolExpr = Expr > Expr
+     [ 6] BoolExpr = Expr < Expr
+[ Info: EGraphPruning: saturating 16 terms (8 patterns, 4 probes)
+   egraph: derived 2 constraint(s) at pattern depth 2 in 4.6s
+     [ 1] (rule_eliminated) Forbidden(a < b): rule 6 is a mirror of rule 5 (Expr > Expr)
+     [ 2] (forbidden) Forbidden(ifelse(p, a, a)): equivalent to canonical a
+   scorer: in-process Z3 ConstraintSatSolver built in 0.24s (4 assumption literals, push/pop per candidate)
+   budget: 6 round(s) max, 120.0s + 200000 enumerations per round, 300.0s per-problem cap
+
+-- round 1/6 ----------------------------------------
+   budget: 120.0s this round, 300.0s left of the problem cap; elapsed 0.0s
+   bounds: depth=9 size=24 cost=7.0  |  bank subsets=0  seeds=0
+   scored so far: 0 distinct candidate(s); best -
+  [enum 1] ★ new best 2/4  size=1  x1
+        [✓] C1: (>= (max3 x1 x2 x3) x1)
+        [✗] C2: (>= (max3 x1 x2 x3) x2)   (violated at Dict{String, Any}())
+        [✗] C3: (>= (max3 x1 x2 x3) x3)   (violated at Dict{String, Any}())
+        [✓] C4: (or (= x1 (max3 x1 x2 x3)) (= x2 (max3 x1 x2 x3)) (= x3 (max3 x1 x2 x3)))
+  [enum 2] banked subset [3, 4] (2/4) size=1  x3
+  [enum 3] banked subset [2, 4] (2/4) size=1  x2
+  [enum 4] banked subset [4] (1/4) size=6  ifelse(x2 > x1, x2, x3)
+  [enum 10] ★ new best 3/4  size=6  ifelse(x2 > x3, x2, x3)
+        [✗] C1: (>= (max3 x1 x2 x3) x1)   (violated at Dict{String, Any}())
+        [✓] C2: (>= (max3 x1 x2 x3) x2)
+        [✓] C3: (>= (max3 x1 x2 x3) x3)
+        [✓] C4: (or (= x1 (max3 x1 x2 x3)) (= x2 (max3 x1 x2 x3)) (= x3 (max3 x1 x2 x3)))
+  [enum 16] banked subset [1, 3, 4] (3/4) size=6  ifelse(x1 > x3, x1, x3)
+  [enum 27] banked subset [1, 2, 4] (3/4) size=6  ifelse(x1 > x2, x1, x2)
+  [round done] enumerated=45 scored=45 skipped=0 unknown-checks=0 banked-subsets=7 (+7)  time=1.9s
+  [stage timers] enumerate/bank=1.6s (88.0%)  z3-score=0.0s (2.0%)  check_tree=0.08s (4.3%) over 444 calls, pruned 210 from bank
+   round 1: enumerated=45 scored=45 best=3/4  ifelse(x2 > x3, x2, x3)  subsets=7  elapsed=2.4s
+   bank (top building blocks, best first):
+     3/4  constraints=[1, 3, 4]  size=6  ifelse(x1 > x3, x1, x3)
+     3/4  constraints=[2, 3, 4]  size=6  ifelse(x2 > x3, x2, x3)
+     3/4  constraints=[1, 2, 4]  size=6  ifelse(x1 > x2, x1, x2)
+     2/4  constraints=[2, 4]  size=1  x2
+     2/4  constraints=[1, 4]  size=1  x1
+     2/4  constraints=[3, 4]  size=1  x3
+     1/4  constraints=[4]  size=6  ifelse(x2 > x1, x2, x3)
+   complementary cover (2 blocks span all 4 constraints):
+     covers [1, 3, 4]  =>  ifelse(x1 > x3, x1, x3)
+     covers [2, 4]  =>  x2
+
+-- round 2/6 ----------------------------------------
+   budget: 120.0s this round, 297.5s left of the problem cap; elapsed 2.5s
+   bounds: depth=9 size=24 cost=7.0  |  bank subsets=7  seeds=4
+   scored so far: 45 distinct candidate(s); best 3/4
+     seed: ifelse(x1 > x3, x1, x3)
+     seed: ifelse(x2 > x3, x2, x3)
+     seed: ifelse(x1 > x2, x1, x2)
+     seed: ifelse(x2 > x1, x2, x3)
+  [enum 120] ★ new best 4/4  size=21  ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))
+        [✓] C1: (>= (max3 x1 x2 x3) x1)
+        [✓] C2: (>= (max3 x1 x2 x3) x2)
+        [✓] C3: (>= (max3 x1 x2 x3) x3)
+        [✓] C4: (or (= x1 (max3 x1 x2 x3)) (= x2 (max3 x1 x2 x3)) (= x3 (max3 x1 x2 x3)))
+  [enum 120] ✔ FULL solution: ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))  (4/4 constraints, Z3-verified universally)
+  [round done] enumerated=120 scored=113 skipped=0 unknown-checks=0 banked-subsets=8 (+1)  time=0.1s
+  [stage timers] enumerate/bank=0.1s (51.0%)  z3-score=0.0s (36.0%)  check_tree=0.0s (3.1%) over 241 calls, pruned 76 from bank
+   round 2: enumerated=120 scored=113 best=4/4  ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))  subsets=8  elapsed=2.6s
+   bank (top building blocks, best first):
+     4/4  constraints=[1, 2, 3, 4]  size=21  ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))
+     3/4  constraints=[1, 3, 4]  size=6  ifelse(x1 > x3, x1, x3)
+     3/4  constraints=[2, 3, 4]  size=6  ifelse(x2 > x3, x2, x3)
+     3/4  constraints=[1, 2, 4]  size=6  ifelse(x1 > x2, x1, x2)
+     2/4  constraints=[2, 4]  size=1  x2
+     2/4  constraints=[1, 4]  size=1  x1
+     2/4  constraints=[3, 4]  size=1  x3
+     1/4  constraints=[4]  size=6  ifelse(x2 > x1, x2, x3)
+   complementary cover (1 blocks span all 4 constraints):
+     covers [1, 2, 3, 4]  =>  ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))
+   independent full-spec verification: PASS
+>>> max3 SOLVED in round 2, 3.0s: ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))
+
+========================================================================
+SUMMARY
+  max3: SOLVED (round 2, 3.0s) — ifelse(ifelse(x1 > x3, x1, x3) > x1, ifelse(x2 > x3, x2, x3), ifelse(x1 > x2, x1, x2))
