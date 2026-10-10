@@ -22,9 +22,16 @@
 #                             granularities specify exactly the same function.
 #
 # Grammar tiers add a second axis, orthogonal to N:
-#   d0  what the family needs: variables, the family's constants, ite, comparisons.
+#   d0s strictly minimal: as d0 but with only the strict comparisons `<` and `>`.
+#   d0  what the family needs: variables, the family's constants, ite, four comparisons.
 #   d1  d0 + `+` and `-`.
 #   d2  d1 + `*` and the constants -1, 1, 2.
+#
+# d0s exists because the two non-strict comparisons are redundant for max_N — ties do
+# not change the maximum — so d0 vs d0s measures what a redundant operator costs in
+# reach. The grammar hardcoded in scripts/iterative_seeded_max.jl, which the runs in
+# results/max_n_climbs/ used, is the d0s grammar; without this tier any comparison
+# against those numbers confounds the grammar with everything else.
 #
 # Usage:
 #   julia --project benchmarks/generate_suite.jl                  # all families, tier d0
@@ -54,7 +61,7 @@ const OUT_ROOT = joinpath(CEGIS_ROOT, "benchmarks")
 # Grammar emission
 # ─────────────────────────────────────────────────────────────────────────────
 
-const TIERS = ("d0", "d1", "d2")
+const TIERS = ("d0s", "d0", "d1", "d2")
 
 """
     grammar_block(vars, constants, tier; indent)
@@ -79,7 +86,8 @@ function grammar_block(vars::Vector{String}, constants::Vector{Int}, tier::Strin
     end
     tier == "d2" && push!(prods, "(* Start Start)")
 
-    conds = "(< Start Start) (<= Start Start) (> Start Start) (>= Start Start)"
+    conds = tier == "d0s" ? "(< Start Start) (> Start Start)" :
+            "(< Start Start) (<= Start Start) (> Start Start) (>= Start Start)"
     return string(
         indent, "((Start Int) (CondExpr Bool))\n",
         indent, "((Start Int (", join(prods, " "), "))\n",
