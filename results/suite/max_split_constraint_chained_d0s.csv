@@ -3,3 +3,5 @@ max,d0s,split,chained,constraint,200000,3,true,2,2.28,4,4,21
 max,d0s,split,chained,constraint,200000,4,true,1,1.12,5,5,46
 max,d0s,split,chained,constraint,200000,5,true,1,26.5,6,6,96
 max,d0s,split,chained,constraint,200000,6,true,1,73.36,7,7,196
+max,d0s,split,chained,constraint,200000,7,true,2,230.22,8,8,226
+max,d0s,split,chained,constraint,200000,8,false,32,300.01,8,9,226

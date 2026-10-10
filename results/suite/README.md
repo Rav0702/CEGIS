@@ -21,7 +21,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | family | granularity | grammar | equiv | highest solved | time at the top | first failure |
 |---|---|---|---|---|---|---|
 | array_search | — | d0 | both | **11** | 275.0 s | N=12 at 12/13 constraints |
-| piecewise | — | d0 | both | **9** | 29.5 s | N=10 (stalled; see below) |
+| piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
 | max | split | d0 | both | **6** | 131.9 s | N=7 at 7/8 |
 | max | witness | d0 | both | **6** | 297.4 s | N=7 at 12/14 |
@@ -86,19 +86,33 @@ program. Sampling the spec's own literals and their lower neighbours instead
 family to N=9. Specs with no integer literals — every max_N spec — reproduce the original
 draws element for element, so the numbers in `../max_n_climbs/` stay comparable.
 
-## Caveat — the per-problem budget was not enforceable, and one problem exposed it
+## Caveat — piecewise_10 stalls inside the library, and the budget cannot reach it
 
 `guided_partial_search` checks its wall clock between *yielded* candidates. The bottom-up
 iterator computes a signature for every combination it considers and yields only the
 first of each equivalence class, so when the gate starts rejecting nearly everything the
-iterator can spin indefinitely without yielding: **piecewise_10 ran at 100 % CPU for over
-13 minutes against a 300 s cap**, with flat RSS and no progress line, identically with
-`USE_EGRAPH=1` and `USE_EGRAPH=0` and with the 5 s Z3 query cap already in place — so
-neither the e-graph stage nor a slow solver query explains it. The deadline is now armed
-inside the signature hook so a stalled round unwinds (`RoundDeadlineReached`), and
-`piecewise_both_chained_v3.*` is the re-run that tests whether N=10 then completes.
-`piecewise_both_chained_PARTIAL_killed.log` is the first stalled attempt, kept as
-evidence.
+iterator can spin without yielding at all. **piecewise_10 does exactly this**: 100 % CPU,
+flat RSS (746 MB), no log line, against a 300 s per-problem cap.
+
+What has been ruled out, each by a run that reproduced the stall anyway:
+
+| suspect | test | verdict |
+|---|---|---|
+| e-graph pruning stage | `USE_EGRAPH=0` control (`*_noegraph.*`) | not the cause — stalls identically |
+| a single unbounded Z3 query | 5 s per-query cap (`CSAT_TIMEOUT_MS`) | not the cause — stalls with the cap in place |
+| a deadline the search never checks | deadline armed inside the signature hook | **does not fire**, even 9 minutes past it |
+
+The last row is the informative one. The hook is the only part of *our* code on that path,
+and arming the deadline there does not interrupt the stall, so the spin is inside
+HerbSearch's own `combine` machinery. Three runs stall at the identical point — enum
+49000, best 9/10, 377 banked subsets — so it is deterministic, not a race.
+
+Bounding it therefore needs something outside the search: run each problem in its own
+process under an OS-level timeout, or a watchdog thread that can kill the iterator. Until
+then `piecewise_9` is the family's honest high-water mark and any per-problem wall-clock
+budget is advisory. The two instrumentation fixes made along the way (the Z3 cap and the
+per-problem CSV append) are worth keeping regardless: without the latter, a killed cell
+reported *none* of the eight problems it had solved and verified.
 
 ## Files
 
@@ -108,7 +122,7 @@ evidence.
 | `array_search_both_chained_v2.*` | array_search re-run from the fixed sampler |
 | `piecewise_both_chained.*` | piecewise, both — stalled at N=10 |
 | `piecewise_both_chained_noegraph.*` | same with `USE_EGRAPH=0` — stalled at N=10 too |
-| `piecewise_both_chained_v3.*` | piecewise re-run with the enumerator deadline |
+| `piecewise_both_chained_v3.*` | piecewise re-run with the enumerator deadline — stalls at N=10 too |
 | `max_split_both_chained.*` | max, split, both |
 | `max_split_constraint_chained.*` | max, split, constraint |
 | `max_split_constraint_chained_d0s.*` | same on the d0s grammar (`<`, `>` only) |
