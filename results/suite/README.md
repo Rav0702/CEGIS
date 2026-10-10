@@ -159,7 +159,7 @@ lives inside `-9:9`. So the sample is a per-family axis like the equivalence mod
 bug with a fix: state which mode a number used. Both figures above are reproducible from
 HEAD via `SAMPLE_MODE`.
 
-## Caveat — piecewise_10 stalls inside the library, and the budget cannot reach it
+## Caveat — piecewise_10 overruns its budget by 35×, inside library code
 
 `guided_partial_search` checks its wall clock between *yielded* candidates. The bottom-up
 iterator computes a signature for every combination it considers and yields only the
@@ -167,13 +167,20 @@ first of each equivalence class, so when the gate starts rejecting nearly everyt
 iterator can spin without yielding at all. **piecewise_10 does exactly this**: 100 % CPU,
 flat RSS (746 MB), no log line, against a 300 s per-problem cap.
 
+It is an overshoot, not a deadlock. Run from scratch under a 60 s per-problem cap,
+piecewise_10 completed its 3 rounds — after **2114 s**, 35× the budget it was given, with
+the deadline never firing. So the work is finite and the search is not wedged in the
+usual sense; the per-problem budget simply does not bound it, and a climb that hits such
+a problem appears hung for as long as it takes. The earlier cells reported here as
+"stalled" would presumably have finished too, given long enough.
+
 What has been ruled out, each by a run that reproduced the stall anyway:
 
 | suspect | test | verdict |
 |---|---|---|
 | e-graph pruning stage | `USE_EGRAPH=0` control (`*_noegraph.*`) | not the cause — stalls identically |
 | a single unbounded Z3 query | 5 s per-query cap (`CSAT_TIMEOUT_MS`) | not the cause — stalls with the cap in place |
-| a deadline the search never checks | deadline armed inside the signature hook | **does not fire**, even 9 minutes past it |
+| a deadline the search never checks | deadline armed inside the signature hook | **never fires** — 9 min past it in one cell, and across 3 rounds of a 2114 s run |
 
 The last row is the informative one. The hook is the only part of *our* code on that path,
 and arming the deadline there does not interrupt the stall, so the spin is inside
@@ -181,9 +188,9 @@ HerbSearch's own `combine` machinery. Three runs stall at the identical point �
 49000, best 9/10, 377 banked subsets — so it is deterministic, not a race.
 
 Bounding it therefore needs something outside the search: run each problem in its own
-process under an OS-level timeout, or a watchdog thread that can kill the iterator. Until
-then `piecewise_9` is the family's honest high-water mark and any per-problem wall-clock
-budget is advisory. The two instrumentation fixes made along the way (the Z3 cap and the
+process under an OS-level timeout, or a watchdog thread that can interrupt the iterator.
+Until then `piecewise_9` is the family's honest high-water mark at a practical budget, and
+every per-problem wall-clock figure in this document is a floor rather than a bound. The two instrumentation fixes made along the way (the Z3 cap and the
 per-problem CSV append) are worth keeping regardless: without the latter, a killed cell
 reported *none* of the eight problems it had solved and verified.
 
