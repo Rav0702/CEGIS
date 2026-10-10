@@ -25,7 +25,24 @@ Protocol: `--problem-time 300` per problem, rounds bounded by `ROUND_ENUM=200000
 consecutive failures. Per-problem rows are in the `*.csv` files, written as each problem
 finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 
-## Highest N solved
+## Bottom line — best known configuration per family
+
+| family | highest N | configuration that achieves it | reproduced |
+|---|---|---|---|
+| `array_search_N` | **11** | `--equiv both`, `SAMPLE_MODE=uniform`, one 300 s round, d0 | twice: 275.0 s, 275.9 s |
+| `max_N` | **9** | `--equiv constraint`, `--granularity split`, `--round-time 120`, d0s | once (230.9 s) |
+| `piecewise_N` | **9** | `--equiv both`, `SAMPLE_MODE=literals`, one 300 s round, d0 | twice: 29.5 s, 45.7 s |
+
+No single configuration is best for all three: array_search wants long rounds and a coarse
+sample, max_N wants short rounds and constraint-subset equivalence, piecewise needs the
+literal-pinned sample that costs array_search four steps. Each setting is justified by a
+measurement in the results below, and a figure without its configuration is not
+meaningful.
+
+95 of 119 problem attempts solved across 16 cells. Every solution re-verified
+independently; no run produced a FAIL.
+
+## All cells
 
 | family | granularity | grammar | equiv | highest solved | time at the top | first failure |
 |---|---|---|---|---|---|---|
