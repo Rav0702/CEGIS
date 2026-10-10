@@ -7,3 +7,7 @@ array_search,d0,split,chained,both,200000,6,true,1,72.84,7,7,36
 array_search,d0,split,chained,both,200000,7,true,1,108.82,8,8,41
 array_search,d0,split,chained,both,200000,8,true,1,190.38,9,9,46
 array_search,d0,split,chained,both,200000,9,true,1,138.29,10,10,51
+array_search,d0,split,chained,both,200000,10,true,1,190.7,11,11,56
+array_search,d0,split,chained,both,200000,11,true,1,275.86,12,12,61
+array_search,d0,split,chained,both,200000,12,false,30,300.0,12,13,56
+array_search,d0,split,chained,both,200000,13,false,30,300.03,13,14,61

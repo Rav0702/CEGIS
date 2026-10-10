@@ -30,6 +30,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | family | granularity | grammar | equiv | highest solved | time at the top | first failure |
 |---|---|---|---|---|---|---|
 | array_search | — | d0 | both | **11** | 275.0 s | N=12 at 12/13 constraints |
+| array_search | — | d0 | both, `--round-time 120` | **7** | 106.1 s | N=8 at 8/9 — see Result 1 |
 | array_search | — | d0 | both, `SAMPLE_MODE=literals` | **7** | 299.9 s | N=8 at 8/9 |
 | piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
@@ -45,7 +46,7 @@ more than one: array_search grows linearly (16 → 61 nodes from N=2 to N=11, on
 per branch), while max_N doubles at every step (21 → 196 nodes from N=3 to N=6) because
 each solution embeds the previous one twice.
 
-## Result 1 — recombination frequency dominates every other axis
+## Result 1 — recombination frequency is the strongest control, and its best setting follows the solution's compositional depth
 
 A round boundary is the only place the bank re-seeds: `select_seeds` hands the next round
 its best composite building blocks as **cost-1 atoms**, which is how a search bounded at
@@ -77,9 +78,37 @@ Across every max_N cell the failing problem ends one constraint short — 8/9, 9
 11/12 — never further behind. The search reliably assembles all but the last obligation,
 which is the shape you would expect if the missing step is one more recombination.
 
-**For the write-up:** the partial-satisfaction score supplies the gradient, but it is the
-*frequency of recombination* that converts the gradient into reach. Any figure quoted
-from this suite must state its round length.
+### …but the same change costs array_search four steps
+
+Run back to back, same load, uniform sampling, nothing else different:
+
+| N | one 300 s round | 120 s rounds |
+|---|---|---|
+| 2 – 7 | 12.1 / 1.1 / 19.3 / 51.5 / 72.8 / 108.8 s | 11.3 / 1.0 / 18.6 / 49.8 / 70.6 / 106.1 s |
+| 8 | **190.4 s ✓** | ✗ (best 8/9) |
+| 9 – 11 | 138.3 / 190.7 / 275.9 s ✓ | — |
+| highest | **11** | **7** |
+
+The per-problem times agree to within a few percent up to N=7, so this is not contention.
+The split happens precisely at N=8, which needs ~190 s of *continuous* enumeration: a
+120 s round boundary throws that progress away and restarts from seeds, and for this
+family the restart never recovers.
+
+### Why the two families disagree
+
+`max_N`'s solution embeds the previous solution **twice** — sizes 21, 46, 96, 196, 476,
+1236 — so a solved max_{N-1} re-seeded as a cost-1 atom is most of max_N, and every extra
+round boundary is another rung on the ladder. `array_search_N`'s solution is a flat `ite`
+chain growing by 5 nodes a step — 16, 21, 26, …, 61 — with nothing to compose: it has to
+be enumerated in one continuous sweep, and a round boundary only discards the sweep.
+
+**For the write-up:** the partial-satisfaction score supplies the gradient, but the
+*frequency of recombination* converts the gradient into reach, and its best setting is a
+function of how compositional the target is — frequent re-seeding for deeply nested
+targets, long uninterrupted rounds for shallow ones. This is the temporal instance of the
+resolution pattern below, and the one with the largest effect in either direction
+(+2 steps on max_N, −4 on array_search). Any figure quoted from this suite must state its
+round length.
 
 ## Result 2 — spec granularity is what makes the method work
 
@@ -120,6 +149,7 @@ building the write-up around:
 
 | dial | too coarse | too fine |
 |---|---|---|
+| round length | long rounds on max_N: no re-seeding → loses 2 steps | short rounds on array_search: sweep discarded → loses 4 steps |
 | spec granularity | `conj`: no gradient, score is 0 until perfect → solves nothing | `witness`: bank fragments, 2× the Z3 cost → loses 3 steps |
 | equivalence mode | — | `constraint` where constants fill the cells → array_search_2 unsolvable |
 | observational sample | `-9:9` on piecewise: needed guard indistinguishable → unsolvable at N=2 | literal-pinned on array_search: bank stops collapsing → loses 4 steps |
