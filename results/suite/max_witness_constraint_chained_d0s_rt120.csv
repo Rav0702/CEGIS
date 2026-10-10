@@ -1,0 +1,2 @@
+family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size
+max,d0s,witness,chained,constraint,200000,3,true,2,2.63,6,6,21

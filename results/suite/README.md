@@ -11,7 +11,8 @@ Hardware: Apple M3, 24 GB, macOS 27.0.1, Julia 1.13.1 (aarch64), Z3 4.16.0 via Z
 array_search_2/3/4 took 12.6/1.1/17.8 s under four concurrent cells against
 12.7/1.0/17.5 s under three.
 
-Protocol: `--problem-time 300` per problem, rounds bounded by `ROUND_ENUM=200000`,
+Protocol: `--problem-time 300` per problem, rounds bounded by `ROUND_ENUM=200000` and by
+`--round-time` where stated (**this matters more than anything else here — see Result 1**),
 `--regime chained` (seed transfer between consecutive problems), climb stops after two
 consecutive failures. Per-problem rows are in the `*.csv` files, written as each problem
 finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
@@ -25,6 +26,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
 | max | split | d0s | constraint | **7** | 230.2 s | N=8 at 8/9 |
+| max | split | d0s | constraint, `--round-time 120` | **9 or more** | 230.9 s | still climbing |
 | max | split | d0 | both | **6** | 131.9 s | N=7 at 7/8 |
 | max | witness | d0 | both | **6** | 297.4 s | N=7 at 12/14 |
 | max | conj | d0 | both | **none** | — | N=3 at 0/1 |
@@ -34,7 +36,36 @@ more than one: array_search grows linearly (16 → 61 nodes from N=2 to N=11, on
 per branch), while max_N doubles at every step (21 → 196 nodes from N=3 to N=6) because
 each solution embeds the previous one twice.
 
-## Result 1 — spec granularity is what makes the method work
+## Result 1 — recombination frequency dominates every other axis
+
+A round boundary is the only place the bank re-seeds: `select_seeds` hands the next round
+its best composite building blocks as **cost-1 atoms**, which is how a search bounded at
+`max_cost = 6` reaches a 1236-node program at all. One long round never re-seeds, so it
+keeps exploring at its original cost horizon; short rounds climb the compositional ladder
+once per boundary.
+
+Same spec, same grammar (d0s), same equivalence mode (`constraint`), same 300 s
+per-problem budget — only the round length differs:
+
+| rounds | max_7 | max_8 | max_9 |
+|---|---|---|---|
+| one 300 s round | 230.2 s | ✗ (best 8/9) | ✗ (best 9/10) |
+| 120 s rounds | **124.0 s** | **131.7 s** | **230.9 s** |
+
+Two extra problems and roughly half the time at equal N. Measured against the other axes
+in this document — grammar redundancy worth ~10 % in time and nothing in reach,
+granularity beyond `split` worth nothing, equivalence mode worth one step — round length
+is the strongest control by a clear margin.
+
+This also closes the comparison with `../max_n_climbs/`, which recorded max_10 at the
+same 300 s budget: those runs used `ROUND_TIME=120`, and `run_suite.jl` had been handing
+the whole budget to a single round. Nothing about the hardware or the specs was involved.
+
+**For the write-up:** the partial-satisfaction score supplies the gradient, but it is the
+*frequency of recombination* that converts the gradient into reach. Any figure quoted
+from this suite must state its round length.
+
+## Result 2 — spec granularity is what makes the method work
 
 Three encodings of *the same function*, same grammar, same budget, same seed transfer;
 only the number of `(constraint …)` clauses differs.
@@ -56,7 +87,7 @@ the Z3 scoring per candidate (max_6 in 297.4 s against 131.9 s). The useful gran
 is "one clause per independently satisfiable obligation", not "as many clauses as
 possible".
 
-## Result 2 — the equivalence mode is a per-family choice, not a tuning knob
+## Result 3 — the equivalence mode is a per-family choice, not a tuning knob
 
 `EQUIV=constraint` keys the bank by *which subset* of constraints a program satisfies,
 keeping the smallest program per subset. Whether that abstraction helps or destroys the
@@ -76,7 +107,7 @@ So constraint-subset equivalence is a predicate abstraction that only pays off w
 granularity exceeds what a constant can achieve. Reporting a single mode across the suite
 would have confounded this with problem difficulty.
 
-## Result 3 — a redundant operator costs time, not reach
+## Result 4 — a redundant operator costs time, not reach
 
 `d0` gives the guard nonterminal all four order comparisons; `d0s` gives it only `<` and
 `>`. For max_N the other two are redundant, since ties do not change a maximum, so `d0s`
@@ -92,7 +123,7 @@ not the difference. The remaining difference is round structure: those runs used
 `run_suite.jl` hands the whole budget to one round. `--round-time` now exposes that knob
 and `*_d0s_rt120.*` is the cell that tests it.
 
-## Result 4 — the observational sample decides what the search can distinguish
+## Result 5 — the observational sample decides what the search can distinguish
 
 The behavioural signature was computed on 32 uniform draws from a hardcoded `-9:9`.
 piecewise thresholds are 10, 20, …, 110, so every guard true across that whole window —
