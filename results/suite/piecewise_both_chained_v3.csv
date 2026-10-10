@@ -1,0 +1,8 @@
+family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size
+piecewise,d0,split,chained,both,200000,2,true,1,2.56,2,2,6
+piecewise,d0,split,chained,both,200000,3,true,1,0.07,3,3,11
+piecewise,d0,split,chained,both,200000,4,true,1,0.57,4,4,16
+piecewise,d0,split,chained,both,200000,5,true,1,2.57,5,5,21
+piecewise,d0,split,chained,both,200000,6,true,1,7.51,6,6,26
+piecewise,d0,split,chained,both,200000,7,true,1,21.02,7,7,31
+piecewise,d0,split,chained,both,200000,8,true,1,35.01,8,8,36
