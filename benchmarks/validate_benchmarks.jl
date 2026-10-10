@@ -36,7 +36,7 @@ const DIFFICULTIES = ["easy", "medium", "hard"]
     for problem in PROBLEMS
         @testset "$problem problem" begin
             for difficulty in DIFFICULTIES
-                spec_path = joinpath(@__DIR__, problem, "$difficulty.sl")
+                spec_path = joinpath(@__DIR__, "micro", problem, "$difficulty.sl")
                 
                 @test isfile(spec_path)
                 content = open(spec_path) do f; read(f, String) end
@@ -46,7 +46,7 @@ const DIFFICULTIES = ["easy", "medium", "hard"]
                 @test contains(content, "check-synth")
                 @test contains(content, "LIA")
                 
-                readme_path = joinpath(@__DIR__, problem, "README.md")
+                readme_path = joinpath(@__DIR__, "micro", problem, "README.md")
                 @test isfile(readme_path)
                 readme_content = open(readme_path) do f; read(f, String) end
                 @test contains(readme_content, "Problem Description")
@@ -67,8 +67,8 @@ for problem in PROBLEMS
     println("━" * repeat("━", 78) * "━")
     
     for difficulty in DIFFICULTIES
-        spec_path = joinpath(@__DIR__, problem, "$difficulty.sl")
-        solution_path = joinpath(@__DIR__, problem, "$difficulty.solution")
+        spec_path = joinpath(@__DIR__, "micro", problem, "$difficulty.sl")
+        solution_path = joinpath(@__DIR__, "micro", problem, "$difficulty.solution")
         
         println("\n  [$difficulty]")
         flush(stdout)
@@ -119,5 +119,5 @@ end
 println("="^80)
 println("✅ Benchmark synthesis complete!")
 println("="^80)
-println("\nSolution files saved to benchmarks/{problem}/{difficulty}.solution")
+println("\nSolution files saved to benchmarks/micro/{problem}/{difficulty}.solution")
 

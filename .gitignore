@@ -12,3 +12,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Throwaway Z3 queries, one-off spec variants, anything not worth versioning
+scratch/
+
+# Run logs (keep the gzipped ones under results/ that are committed deliberately)
+*.log

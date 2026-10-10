@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The CEGIS Loop</title>
+<style>
+  :root {
+    --ink: #1f2933;
+    --muted: #66727d;
+    --synth: #2f6fed;
+    --synth-bg: #eaf1ff;
+    --verify: #c77d07;
+    --verify-bg: #fff4e0;
+    --done: #1f9d55;
+    --done-bg: #e6f6ec;
+    --cex: #d64545;
+    --line: #9aa5b1;
+  }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    margin: 0;
+    padding: 32px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+
+  .stage { position: relative; width: 720px; height: 560px; }
+
+  .box {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 12px 16px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .box .title { font-weight: 700; font-size: 15px; }
+  .box .desc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .synth  { left: 150px; top: 40px;  width: 300px; height: 92px;
+            border-color: var(--synth); background: var(--synth-bg); }
+  .verify { left: 150px; top: 240px; width: 300px; height: 100px;
+            border-color: var(--verify); background: var(--verify-bg); }
+  .done   { left: 210px; top: 452px; width: 180px; height: 64px;
+            border-color: var(--done); background: var(--done-bg);
+            text-align: center; }
+  .synth .title  { color: var(--synth); }
+  .verify .title { color: var(--verify); }
+  .done .title   { color: var(--done); }
+
+  .label {
+    position: absolute;
+    font-size: 13px;
+    color: var(--muted);
+    background: #fff;
+    padding: 1px 4px;
+  }
+  .label.strong { color: var(--ink); font-weight: 600; }
+  .label.cex { color: var(--cex); font-weight: 600; }
+
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>The CEGIS Loop</h1>
+  <p class="sub">Counterexample-Guided Inductive Synthesis. Start with no examples.</p>
+
+  <div class="stage">
+    <svg width="720" height="560" style="position:absolute; left:0; top:0;">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b6670"></path>
+        </marker>
+      </defs>
+
+      <!-- candidate f: synth to verifier -->
+      <line x1="300" y1="132" x2="300" y2="236"
+            stroke="#5b6670" stroke-width="2" marker-end="url(#arrow)"></line>
+
+      <!-- unsat: verifier to done -->
+      <line x1="300" y1="340" x2="300" y2="448"
+            stroke="#1f9d55" stroke-width="2" marker-end="url(#arrow)"></line>
+
+      <!-- sat feedback loop: verifier right, up, back into synth right -->
+      <polyline points="452,290 600,290 600,86 452,86"
+                fill="none" stroke="#d64545" stroke-width="2"
+                marker-end="url(#arrow)"></polyline>
+    </svg>
+
+    <div class="box synth">
+      <div class="title">Synthesizer (Herb search)</div>
+      <div class="desc">enumerate the cheapest candidate f that fits the current examples</div>
+    </div>
+
+    <div class="box verify">
+      <div class="title">Verifier / Oracle (Z3)</div>
+      <div class="desc">is there an input where f breaks the spec?<br>
+        <code>(check-sat (not (and constraints)))</code></div>
+    </div>
+
+    <div class="box done">
+      <div class="title">DONE</div>
+      <div class="desc" style="margin-top:2px;">f is correct for all inputs</div>
+    </div>
+
+    <div class="label strong" style="left:312px; top:178px;">candidate f</div>
+    <div class="label" style="left:312px; top:388px; color:var(--done); font-weight:600;">
+      unsat: verified</div>
+    <div class="label cex" style="left:470px; top:150px; width:150px;">
+      sat: add the counterexample (input, output) as a new example</div>
+  </div>
+</body>
+</html>
