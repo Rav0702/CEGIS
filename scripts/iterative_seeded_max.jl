@@ -107,6 +107,46 @@ function reset_sig_counters!()
 end
 
 """
+    RoundDeadlineReached
+
+Thrown out of the equivalence-signature hook once a round's wall-clock budget is gone.
+
+`guided_partial_search` tests its own budget between *yielded* candidates, which does
+not bound a round: the bottom-up iterator computes a signature for every combination it
+considers and keeps only the first of each equivalence class, so once the gate starts
+rejecting nearly everything the iterator can spin for an unbounded time without yielding
+anything at all — piecewise_10 sat at 100 % CPU for 13 minutes against a 300 s cap, with
+flat memory and no progress line, in both the e-graph-on and e-graph-off configurations.
+
+The signature hook is the one piece of our code that runs on every combination, so the
+deadline is enforced there and unwinds the round. Whatever the bank accepted before the
+throw is kept, so the round still contributes its building blocks.
+"""
+struct RoundDeadlineReached <: Exception
+    elapsed::Float64
+end
+
+"""Absolute `time()` after which the current round must stop enumerating, and when it
+started. Set by `solve_spec` per round; `Inf` disables the check."""
+const ROUND_DEADLINE = Ref(Inf)
+const ROUND_STARTED  = Ref(0.0)
+
+function arm_round_deadline!(seconds::Float64)
+    ROUND_STARTED[]  = time()
+    ROUND_DEADLINE[] = isfinite(seconds) ? time() + seconds : Inf
+    return nothing
+end
+
+disarm_round_deadline!() = (ROUND_DEADLINE[] = Inf; nothing)
+
+@inline function check_round_deadline()
+    if time() > ROUND_DEADLINE[]
+        throw(RoundDeadlineReached(time() - ROUND_STARTED[]))
+    end
+    return nothing
+end
+
+"""
     make_program_to_signature(spec, grammar, css; mode)
 
 Build the `program_to_outputs` function for the iterator. `mode` is one of
@@ -131,11 +171,13 @@ function make_program_to_signature(spec, grammar, css; mode::Symbol=:observation
     end
 
     mode === :observational && return function (prog::RuleNode)
+        check_round_deadline()
         _t = time(); sig = obs(prog); SIG_TIME[] += time() - _t
         return count_and_return(sig, :obs)
     end
 
     return function (prog::RuleNode)
+        check_round_deadline()
         _t = time()
         T = HerbGrammar.return_type(grammar, prog)
         sig = if T !== :Expr
@@ -249,10 +291,25 @@ function solve_spec(path::String; rounds::Int, round_enum::Int, round_time::Floa
             seed_programs = seeds, seed_cost = 1.0)
 
         reset_sig_counters!()
-        res = PS.guided_partial_search(spec, grammar, iterator;
-            max_enumerations = round_enum, max_time = this_round_time,
-            csat_solver = css, bank, seen, verbose = true,
-            log_every = parse(Int, get(ENV, "LOG_EVERY", "1000")))
+        # The same budget is handed to the search loop (checked between candidates) and
+        # armed inside the signature hook (checked on every combination the iterator
+        # considers), because only the latter can interrupt a combine layer. A little
+        # slack keeps the inner deadline from pre-empting the loop's own clean exit.
+        arm_round_deadline!(this_round_time * 1.05)
+        res = try
+            PS.guided_partial_search(spec, grammar, iterator;
+                max_enumerations = round_enum, max_time = this_round_time,
+                csat_solver = css, bank, seen, verbose = true,
+                log_every = parse(Int, get(ENV, "LOG_EVERY", "1000")))
+        catch e
+            e isa RoundDeadlineReached || rethrow()
+            println("   round $r cut inside the enumerator after $(round(e.elapsed, digits=1))s " *
+                    "(no candidate yielded for long enough to exhaust the budget); " *
+                    "keeping what the bank already holds")
+            (; enumerated = 0, scored = 0, full = nothing)
+        finally
+            disarm_round_deadline!()
+        end
 
         kept = SIG_CALLS[] - SIG_DUPES[]
         pct = SIG_CALLS[] == 0 ? "n/a" : string(round(100 * SIG_DUPES[] / SIG_CALLS[], digits=1), "%")
