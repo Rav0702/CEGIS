@@ -226,3 +226,87 @@ merged local branches for deletion, leave remotes alone.
 | index-based seed remap silently wrong on new grammars | expression-matched remap + error on unmappable rule (§1.5) |
 | bank saturation / memory at high N | 4-process cap; `ROUND_ENUM` bound; per-problem memory logged |
 | cleanup breaks paths the runs use | cleanup lands after the runs are launched, benchmark paths untouched |
+
+---
+
+# Status — 2026-10-10
+
+## Done
+
+**Part 1 — per-problem grammars** (commit `056f031`)
+`SynthFun.grammar_sexp` + parser capture; `GrammarBuilding/SyGuSGrammar.jl` (v2 and v1
+forms, `(Constant Sort)` / `(Variable Sort)`, nonterminals renamed to `Expr`/`BoolExpr`);
+`build_grammar_from_spec` prefers a declared grammar and still falls back to the
+operation sets; `rulenode_to_smt2` resolves nonterminal pass-throughs by inferred sort
+instead of by the names `Expr`/`BoolExpr`, and now maps `&&`/`||`/`!`;
+`GrammarBuilding/RuleNodeRemap.jl` for expression-matched program transfer;
+`test/test_sygus_grammar.jl` (11 test sets) registered in `runtests.jl`.
+
+**Part 2 — generator** (commit `a61f1bf`)
+`benchmarks/generate_suite.jl` for all three families with the `--validate` gate, and
+`scripts/run_suite.jl` as the family-agnostic climb driver.
+
+Two deviations from the plan above:
+- the third max_N granularity is **`witness`** (2N constraints: the N inequalities plus
+  the per-input case split "if x_i dominates every input then y = x_i"), not the
+  `pairwise` variant sketched in §2.3. The pairwise inequalities are implied by two
+  `split` constraints each, so they coarsen rather than refine; the case split is a
+  genuinely finer decomposition of the hard disjunctive constraint and is complete on
+  its own.
+- `run_suite.jl` **includes** `iterative_seeded_max.jl` and reuses `solve_spec` rather
+  than moving the search into `src/Suite/` (plan §4.2). The large refactor is deferred:
+  it is not needed to run three families, and doing it while Julia cannot run on this
+  machine would be untested churn.
+
+**Part 4 — cleanup** (commit `1c9b43f`)
+Root went from 24 entries to 12. Archived six stale reports, deleted 194 KB of
+regenerable dumps, moved presentation artifacts and research notes under `docs/`, moved
+nine scratch `.smt2` files and three non-spec scratch files into a gitignored `scratch/`,
+grouped the eight one-off problems under `benchmarks/micro/` (updating
+`validate_benchmarks.jl` and the benchmarks README), moved two root scripts into
+`scripts/`. `spec_files/*.sl` stayed put because `test/test_helpers.jl` looks specs up
+there by name. Nothing pushed; three local commits on
+`partial_specification_satisfaction_and_iterator_constraints`.
+
+## Blocked — Part 3 cannot run: there is no runnable Julia on this machine
+
+    $ julia --version
+    bad CPU type in executable: julia
+
+The only Julia installed is `~/.juliaup/julia-1.12.6+0.x64.apple.darwin14` — an
+**x86_64** build — and this machine is macOS 27.0.1 on arm64, where Rosetta 2 no longer
+translates it. `juliaup` itself is the same x86_64 binary, so it cannot install a
+replacement either. The `results/max_n_climbs/` runs predate the OS upgrade.
+
+Consequence: the code in commits `056f031`/`a61f1bf` is **written but never executed** —
+not the test suite, not the generator, not one spec file emitted. No benchmark files
+exist on disk yet, and no high-water mark can be measured.
+
+Fix (needs the user): install a native arm64 Julia, e.g.
+
+    curl -fsSL https://install.julialang.org | sh      # juliaup, native
+    # then, in the repo:
+    julia --project -e 'using Pkg; Pkg.instantiate()'  # re-resolve arm64 artifacts (Z3_jll)
+
+## Then, in order
+
+1. `julia --project test/runtests.jl` — the new grammar tests are the gate on Part 1.
+2. `julia --project benchmarks/generate_suite.jl --validate` — emits 67 specs at tier d0
+   and verifies every reference solution. Expect to iterate here; nothing has run yet.
+3. Fan out the climbs, 4 concurrent Julia processes maximum (memory, not CPU, is the
+   limit — bank saturation is what stopped max11–16):
+
+        julia --project scripts/run_suite.jl --family array_search --equiv constraint \
+              --csv results/suite/array_search_constraint_chained.csv
+        julia --project scripts/run_suite.jl --family piecewise --equiv constraint \
+              --csv results/suite/piecewise_constraint_chained.csv
+        julia --project scripts/run_suite.jl --family max --granularity split --equiv constraint \
+              --csv results/suite/max_split_constraint_chained.csv
+        julia --project scripts/run_suite.jl --family max --granularity witness --equiv constraint \
+              --csv results/suite/max_witness_constraint_chained.csv
+        julia --project scripts/run_suite.jl --family max --granularity conj --equiv constraint \
+              --csv results/suite/max_conj_constraint_chained.csv
+
+   then the `--regime independent` and `--equiv observational` arms, and one
+   `USE_EGRAPH=0` control per family.
+4. Collect `results/SUITE_2026-10-10.md`; settle the `main`-vs-`master` question (§4.3).
