@@ -23,6 +23,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | array_search | — | d0 | both | **11** | 275.0 s | N=12 at 12/13 constraints |
 | piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
+| max | split | d0s | constraint | **7** | 230.2 s | N=8 at 8/9 |
 | max | split | d0 | both | **6** | 131.9 s | N=7 at 7/8 |
 | max | witness | d0 | both | **6** | 297.4 s | N=7 at 12/14 |
 | max | conj | d0 | both | **none** | — | N=3 at 0/1 |
@@ -74,7 +75,23 @@ So constraint-subset equivalence is a predicate abstraction that only pays off w
 granularity exceeds what a constant can achieve. Reporting a single mode across the suite
 would have confounded this with problem difficulty.
 
-## Result 3 — the observational sample decides what the search can distinguish
+## Result 3 — a redundant operator costs time, not reach
+
+`d0` gives the guard nonterminal all four order comparisons; `d0s` gives it only `<` and
+`>`. For max_N the other two are redundant, since ties do not change a maximum, so `d0s`
+halves the guard space. It buys about 10 % in time at equal N (max_6 in 73.4 s against
+95.5 s, max_7 in 230.2 s against 251.9 s) and **no extra reach at all** — both stop at
+max_7 with the same 8/9 best on max_8.
+
+This also settles a comparison against `../max_n_climbs/`, which recorded max_10 under
+`EQUIV=constraint` at the same 300 s budget. `d0s` reproduces the grammar those runs used
+(it is exactly the one hardcoded in `scripts/iterative_seeded_max.jl`), so the grammar is
+not the difference. The remaining difference is round structure: those runs used
+`ROUND_TIME=120` inside the 300 s cap, giving several re-seedings per problem, where
+`run_suite.jl` hands the whole budget to one round. `--round-time` now exposes that knob
+and `*_d0s_rt120.*` is the cell that tests it.
+
+## Result 4 — the observational sample decides what the search can distinguish
 
 The behavioural signature was computed on 32 uniform draws from a hardcoded `-9:9`.
 piecewise thresholds are 10, 20, …, 110, so every guard true across that whole window —

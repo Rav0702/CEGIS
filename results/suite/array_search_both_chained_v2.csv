@@ -6,3 +6,4 @@ array_search,d0,split,chained,both,200000,5,true,1,82.03,6,6,31
 array_search,d0,split,chained,both,200000,6,true,1,120.67,7,7,36
 array_search,d0,split,chained,both,200000,7,true,1,299.92,8,8,41
 array_search,d0,split,chained,both,200000,8,false,30,300.0,8,9,36
+array_search,d0,split,chained,both,200000,9,false,30,300.0,8,10,36
