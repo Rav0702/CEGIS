@@ -21,6 +21,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | family | granularity | grammar | equiv | highest solved | time at the top | first failure |
 |---|---|---|---|---|---|---|
 | array_search | — | d0 | both | **11** | 275.0 s | N=12 at 12/13 constraints |
+| array_search | — | d0 | both, `SAMPLE_MODE=literals` | **7** | 299.9 s | N=8 at 8/9 |
 | piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
 | max | split | d0s | constraint | **7** | 230.2 s | N=8 at 8/9 |
@@ -102,6 +103,15 @@ program. Sampling the spec's own literals and their lower neighbours instead
 (`src/PartialSat/ObservationalSamples.jl`) solves piecewise_2 in 1.9 s and carried the
 family to N=9. Specs with no integer literals — every max_N spec — reproduce the original
 draws element for element, so the numbers in `../max_n_climbs/` stay comparable.
+
+The same change is a **four-step loss** on array_search: N=11 under `SAMPLE_MODE=uniform`
+against N=7 under `:literals`, at the same budget, and N=7 only just inside it at
+299.9 s of 300 s. The mechanism is the one the mode is for — a finer sample distinguishes
+more programs, so the bank collapses less and `combine` has more to work through — and
+array_search gains nothing from the extra resolution because all of its behaviour already
+lives inside `-9:9`. So the sample is a per-family axis like the equivalence mode, not a
+bug with a fix: state which mode a number used. Both figures above are reproducible from
+HEAD via `SAMPLE_MODE`.
 
 ## Caveat — piecewise_10 stalls inside the library, and the budget cannot reach it
 
