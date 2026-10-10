@@ -7,9 +7,17 @@ all-or-nothing counterexample query (`independent full-spec verification: PASS`)
 produced a FAIL.
 
 Hardware: Apple M3, 24 GB, macOS 27.0.1, Julia 1.13.1 (aarch64), Z3 4.16.0 via Z3.jl
-1.0.4, HerbSearch 1.0.2. Up to four cells ran concurrently; contention is negligible —
-array_search_2/3/4 took 12.6/1.1/17.8 s under four concurrent cells against
-12.7/1.0/17.5 s under three.
+1.0.4, HerbSearch 1.0.2. Up to four cells ran concurrently, and at that level contention
+is negligible — array_search_2/3/4 took 12.6/1.1/17.8 s under four concurrent cells
+against 12.7/1.0/17.5 s under three.
+
+**Timing caveat for the `*_rt120.*` cells.** They ran while two processes wedged on
+piecewise_10 were still spinning at 100 % CPU (they cannot be interrupted — see the
+stall section), so five CPU-bound processes were live and the earlier contention
+measurement does not cover them: array_search_4/5/6 take 27.6/71.6/98.4 s there against
+17.8/47.3/67.4 s in the uncontended cell. Compare *reach* across those cells, not times.
+The round-length result in Result 1 is a reach gain, which contention can only have
+worked against, so it is unaffected.
 
 Protocol: `--problem-time 300` per problem, rounds bounded by `ROUND_ENUM=200000` and by
 `--round-time` where stated (**this matters more than anything else here — see Result 1**),
