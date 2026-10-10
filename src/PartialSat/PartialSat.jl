@@ -40,6 +40,8 @@ using HerbConstraints
 using HerbSearch
 using ..CEXGeneration
 
+include("ObservationalSamples.jl")
+
 # Stage timers (populated per `guided_partial_search` round). `check_tree` time is
 # accumulated inside the constraint-aware `add_to_bank!` override (SeededBottomUp.jl);
 # enumeration and Z3-scoring time are accumulated in the search loop below.
@@ -50,7 +52,8 @@ const CHECK_TREE_PRUNED = Ref(0)    # programs rejected from the bank by a const
 export PartialSatResult, PartialSolutionBank, BankEntry,
        evaluate_partial_satisfaction, candidate_exprs_from_rulenode,
        record!, building_blocks, complementary_cover, guided_partial_search,
-       collect_satisfying, SeededCostBUIterator
+       collect_satisfying, SeededCostBUIterator,
+       spec_integer_literals, observational_samples
 
 # -----------------------------------------------------------------------------
 # Evaluation

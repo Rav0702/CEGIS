@@ -31,78 +31,11 @@ const CEX = CEGIS.CEXGeneration
 # doesn't blow up into a cartesian product of behaviorally-identical programs.
 # This is what makes higher cost bounds tractable.
 
-"""
-    spec_integer_literals(spec) :: Vector{Int}
-
-The integer literals appearing in the spec's constraints. Splitting is on the SMT-LIB
-delimiters only, so an identifier stays one token and the digits inside it (`max3`,
-`x10`) are never mistaken for literals.
-"""
-function spec_integer_literals(spec)::Vector{Int}
-    out = Int[]
-    for c in spec.constraints
-        for tok in split(c, r"[\s()]+")
-            occursin(r"^-?[0-9]+$", tok) || continue
-            v = tryparse(Int, tok)
-            v === nothing || push!(out, v)
-        end
-    end
-    return sort!(unique!(out))
-end
-
-"""
-    observational_samples(spec; n_samples, rng) :: Vector{Dict{Symbol,Any}}
-
-The fixed input points behind the observational signature.
-
-A sample drawn only from `-9:9` cannot separate programs whose behaviour differs
-outside that window: on `piecewise_N`, whose thresholds are 10, 20, …, every guard that
-is true across the whole sample (`x < 10`, `x < 20`, and the constant comparison
-`2 < 8`) hashes to one bank cell, so the guard a solution needs is dropped in favour of
-whichever arrived first — and the family becomes unsolvable for a reason that has
-nothing to do with the search. The pool therefore carries the spec's own literals and
-their neighbours, and spans a range wide enough to reach them, with the first points
-pinned to the literals so coverage does not depend on the draw.
-
-A spec with no integer literals (every `max_N` spec) keeps exactly the original
-behaviour — 32 uniform draws from `-9:9` off the same seed — so earlier numbers stay
-comparable.
-"""
-function observational_samples(spec; n_samples::Int, rng)::Vector{Dict{Symbol,Any}}
-    vars = [Symbol(fv.name) for fv in spec.free_vars]
-    consts = spec_integer_literals(spec)
-    samples = Vector{Dict{Symbol,Any}}(undef, n_samples)
-
-    if isempty(consts)
-        # Mix of ties, zeros, negatives and spread values so distinct max-behaviours separate.
-        for k in 1:n_samples
-            samples[k] = Dict{Symbol,Any}(v => rand(rng, -9:9) for v in vars)
-        end
-        return samples
-    end
-
-    lo = min(-9, minimum(consts)) - 2
-    hi = max(9, maximum(consts)) + 2
-    # Each literal and the point just below it: that pair is what separates `x < c`
-    # from `x < c+1`, and a threshold from its own boundary.
-    pinned = sort!(unique!(reduce(vcat, [[c - 1, c] for c in consts])))
-    pool = sort!(unique!(vcat(collect(-9:9), pinned,
-                              round.(Int, range(lo, hi; length = 16)))))
-
-    n_pinned = min(length(pinned), n_samples ÷ 2)
-    for k in 1:n_pinned
-        # All variables at the same literal: a diagonal point, which also exercises ties.
-        samples[k] = Dict{Symbol,Any}(v => pinned[k] for v in vars)
-    end
-    for k in (n_pinned + 1):n_samples
-        samples[k] = Dict{Symbol,Any}(v => rand(rng, pool) for v in vars)
-    end
-    return samples
-end
-
 function make_program_to_outputs(spec, grammar; n_samples::Int=32, seed::Int=1234)
     rng = MersenneTwister(seed)
-    samples = observational_samples(spec; n_samples, rng)
+    # Sample construction lives in PartialSat/ObservationalSamples.jl, where it is
+    # covered by tests; what the sample can distinguish decides what the bank keeps.
+    samples = PS.observational_samples(spec; n_samples, rng)
     return function (prog::RuleNode)
         out = Vector{Any}(undef, n_samples)
         for (k, inp) in enumerate(samples)
