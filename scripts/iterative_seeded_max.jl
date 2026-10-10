@@ -34,8 +34,10 @@ const CEX = CEGIS.CEXGeneration
 function make_program_to_outputs(spec, grammar; n_samples::Int=32, seed::Int=1234)
     rng = MersenneTwister(seed)
     # Sample construction lives in PartialSat/ObservationalSamples.jl, where it is
-    # covered by tests; what the sample can distinguish decides what the bank keeps.
-    samples = PS.observational_samples(spec; n_samples, rng)
+    # covered by tests; what the sample can distinguish decides what the bank keeps,
+    # and SAMPLE_MODE=uniform|literals trades resolution against bank collapse.
+    mode = Symbol(get(ENV, "SAMPLE_MODE", "literals"))
+    samples = PS.observational_samples(spec; n_samples, rng, mode)
     return function (prog::RuleNode)
         out = Vector{Any}(undef, n_samples)
         for (k, inp) in enumerate(samples)

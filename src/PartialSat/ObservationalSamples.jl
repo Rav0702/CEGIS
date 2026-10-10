@@ -31,7 +31,7 @@ function spec_integer_literals(spec)::Vector{Int}
 end
 
 """
-    observational_samples(spec; n_samples=32, rng) :: Vector{Dict{Symbol,Any}}
+    observational_samples(spec; n_samples=32, rng, mode=:literals) :: Vector{Dict{Symbol,Any}}
 
 Input points at which to evaluate a candidate for its behavioural signature.
 
@@ -51,12 +51,30 @@ A spec with no integer literals — every `max_N` spec — keeps the original be
 for bit: `n_samples` uniform draws from `-9:9` off the same seed, so earlier numbers stay
 comparable.
 
+`mode` selects between the two, and the choice is a real trade-off rather than a bug fix
+with a free lunch:
+
+- `:literals` (default) — the pool described above. Required wherever the interesting
+  behaviour lives outside `-9:9`.
+- `:uniform` — `n_samples` uniform draws from `-9:9` regardless of the spec, i.e. the
+  original behaviour for every family.
+
+A finer sample distinguishes more programs, which means the bank collapses *less* and
+the iterator's `combine` has more to chew through. On `array_search_N`, where all the
+action already happens inside `-9:9`, the extra resolution is pure cost: the family
+reached N=11 under `:uniform` and N=7 at the same 300 s budget under `:literals`. On
+`piecewise_N` the coarse sample is not merely slower but wrong — it cannot represent the
+guard a solution needs. Pick per family and report which was used.
+
 `rng` is passed in rather than constructed here: `Random` is a stdlib the package does
 not declare as a dependency, and the caller already owns the seed.
 """
-function observational_samples(spec; n_samples::Int = 32, rng)::Vector{Dict{Symbol,Any}}
+function observational_samples(spec; n_samples::Int = 32, rng,
+                               mode::Symbol = :literals)::Vector{Dict{Symbol,Any}}
+    mode in (:literals, :uniform) ||
+        error("observational_samples: mode must be :literals or :uniform, got $mode")
     vars = [Symbol(fv.name) for fv in spec.free_vars]
-    consts = spec_integer_literals(spec)
+    consts = mode === :uniform ? Int[] : spec_integer_literals(spec)
     samples = Vector{Dict{Symbol,Any}}(undef, n_samples)
 
     if isempty(consts)

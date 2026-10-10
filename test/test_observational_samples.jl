@@ -79,6 +79,22 @@ end
         @test sig(x -> x < 10) != sig(x -> x <= 10)
     end
 
+    @testset "mode=:uniform ignores the literals entirely" begin
+        spec = _spec_with_constraints([
+            "(=> (< x 10) (= (f x) 8))",
+            "(=> (>= x 10) (= (f x) 2))"], ["x"])
+        got = PST.observational_samples(spec; n_samples = 32, rng = MersenneTwister(1234),
+                                        mode = :uniform)
+        @test all(all(-9 <= v <= 9 for v in values(d)) for d in got)
+
+        # identical to what a spec with no literals produces, which is the point
+        bare = _spec_with_constraints(["(>= (f x) x)"], ["x"])
+        @test got == PST.observational_samples(bare; n_samples = 32, rng = MersenneTwister(1234))
+
+        @test_throws Exception PST.observational_samples(spec; n_samples = 4,
+                                                         rng = MersenneTwister(1), mode = :nonsense)
+    end
+
     @testset "sample count is honoured and every variable is bound" begin
         spec = _spec_with_constraints(["(=> (< x 40) (= (f x y) 3))"], ["x", "y"])
         for n in (8, 16, 32)
