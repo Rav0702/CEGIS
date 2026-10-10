@@ -399,4 +399,6 @@ function main(args::Vector{String})
     end
 end
 
-abspath(PROGRAM_FILE) == @__FILE__ && main(copy(ARGS))
+if abspath(PROGRAM_FILE) == @__FILE__
+    main(copy(ARGS))
+end

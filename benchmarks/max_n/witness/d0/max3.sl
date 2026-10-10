@@ -1,0 +1,20 @@
+(set-logic LIA)
+
+(synth-fun max3 ((x1 Int) (x2 Int) (x3 Int)) Int
+  ((Start Int) (CondExpr Bool))
+  ((Start Int (x1 x2 x3 (ite CondExpr Start Start)))
+   (CondExpr Bool ((< Start Start) (<= Start Start) (> Start Start) (>= Start Start))))
+)
+
+(declare-var x1 Int)
+(declare-var x2 Int)
+(declare-var x3 Int)
+
+(constraint (>= (max3 x1 x2 x3) x1))
+(constraint (>= (max3 x1 x2 x3) x2))
+(constraint (>= (max3 x1 x2 x3) x3))
+(constraint (=> (and (>= x1 x2) (>= x1 x3)) (= (max3 x1 x2 x3) x1)))
+(constraint (=> (and (>= x2 x1) (>= x2 x3)) (= (max3 x1 x2 x3) x2)))
+(constraint (=> (and (>= x3 x1) (>= x3 x2)) (= (max3 x1 x2 x3) x3)))
+
+(check-synth)
