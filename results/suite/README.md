@@ -37,6 +37,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | max | split | d0s | constraint, `--round-time 120` | **9** | 230.9 s | N=10 at 10/11, N=11 at 11/12 |
 | max | split | d0 | both | **6** | 131.9 s | N=7 at 7/8 |
 | max | witness | d0 | both | **6** | 297.4 s | N=7 at 12/14 |
+| max | witness | d0s | constraint, `--round-time 120` | **6** | 131.4 s | N=7 at 12/14 |
 | max | conj | d0 | both | **none** | — | N=3 at 0/1 |
 
 Solution sizes scale very differently across the families, which is the point of having
@@ -97,10 +98,38 @@ candidates, and the best program after 32 rounds is `x1` at 0/1. This isolates
 *specification decomposability* as the source of the method's reach, rather than the
 bank-and-seeding machinery, which is identical across all three rows.
 
-Going finer than `split` buys nothing: `witness` reaches the same N while paying twice
-the Z3 scoring per candidate (max_6 in 297.4 s against 131.9 s). The useful granularity
-is "one clause per independently satisfiable obligation", not "as many clauses as
-possible".
+Going finer than `split` does not merely fail to help, it **costs three steps**. Under the
+better round structure (Result 1), where `split` reaches max_9, `witness` still stops at
+max_6:
+
+| granularity | constraints | d0s, constraint, 120 s rounds |
+|---|---|---|
+| `conj` | 1 | none |
+| `split` | N+1 | **max_9** |
+| `witness` | 2N | max_6 |
+
+Two costs compound: 2N Z3 checks per candidate instead of N+1, and a bank fragmented over
+2^2N subset cells instead of 2^(N+1), which collapses less and leaves `combine` more to
+chew through. The useful granularity is one clause per independently satisfiable
+obligation — not as many clauses as possible.
+
+## The pattern across Results 2-5 — every abstraction here is a resolution dial that fails at both ends
+
+The four axes below look unrelated but behave identically, and this is the thing worth
+building the write-up around:
+
+| dial | too coarse | too fine |
+|---|---|---|
+| spec granularity | `conj`: no gradient, score is 0 until perfect → solves nothing | `witness`: bank fragments, 2× the Z3 cost → loses 3 steps |
+| equivalence mode | — | `constraint` where constants fill the cells → array_search_2 unsolvable |
+| observational sample | `-9:9` on piecewise: needed guard indistinguishable → unsolvable at N=2 | literal-pinned on array_search: bank stops collapsing → loses 4 steps |
+| grammar tier | — | `d0` vs `d0s`: redundant comparisons, ~10 % time, no reach |
+
+Too coarse and distinct programs collapse into one bank cell, so the one the solution
+needs is thrown away. Too fine and nothing collapses, so the bank bloats and `combine`
+drowns. The method's reach is set by how close each dial sits to the resolution the
+*problem* actually has — which is why these are per-family choices and why every reported
+number has to name them.
 
 ## Result 3 — the equivalence mode is a per-family choice, not a tuning knob
 

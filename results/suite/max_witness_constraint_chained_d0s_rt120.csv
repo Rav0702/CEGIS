@@ -1,5 +1,7 @@
 family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size
-max,d0s,witness,chained,constraint,200000,3,true,2,2.63,6,6,21
-max,d0s,witness,chained,constraint,200000,4,true,1,24.62,8,8,46
-max,d0s,witness,chained,constraint,200000,5,true,1,49.19,10,10,96
-max,d0s,witness,chained,constraint,200000,6,true,2,131.3,12,12,206
+max,d0s,witness,chained,constraint,200000,3,true,2,2.24,6,6,21
+max,d0s,witness,chained,constraint,200000,4,true,1,17.73,8,8,46
+max,d0s,witness,chained,constraint,200000,5,true,1,41.63,10,10,96
+max,d0s,witness,chained,constraint,200000,6,true,2,131.44,12,12,226
+max,d0s,witness,chained,constraint,200000,7,false,32,300.01,12,14,196
+max,d0s,witness,chained,constraint,200000,8,false,32,300.03,14,16,456
