@@ -34,7 +34,7 @@ finishes; `scripts/summarise_suite.jl` regenerates the table below from them.
 | piecewise | — | d0 | both | **9** | 29.5 s | N=10 stalls in the library (see below) |
 | max | split | d0 | constraint | **7** | 251.9 s | N=8 at 8/9 |
 | max | split | d0s | constraint | **7** | 230.2 s | N=8 at 8/9 |
-| max | split | d0s | constraint, `--round-time 120` | **9 or more** | 230.9 s | still climbing |
+| max | split | d0s | constraint, `--round-time 120` | **9** | 230.9 s | N=10 at 10/11, N=11 at 11/12 |
 | max | split | d0 | both | **6** | 131.9 s | N=7 at 7/8 |
 | max | witness | d0 | both | **6** | 297.4 s | N=7 at 12/14 |
 | max | conj | d0 | both | **none** | — | N=3 at 0/1 |
@@ -55,10 +55,10 @@ once per boundary.
 Same spec, same grammar (d0s), same equivalence mode (`constraint`), same 300 s
 per-problem budget — only the round length differs:
 
-| rounds | max_7 | max_8 | max_9 |
-|---|---|---|---|
-| one 300 s round | 230.2 s | ✗ (best 8/9) | ✗ (best 9/10) |
-| 120 s rounds | **124.0 s** | **131.7 s** | **230.9 s** |
+| rounds | max_7 | max_8 | max_9 | max_10 |
+|---|---|---|---|---|
+| one 300 s round | 230.2 s | ✗ (best 8/9) | ✗ (best 9/10) | — |
+| 120 s rounds | **124.0 s** | **131.7 s** | **230.9 s** | ✗ (best 10/11) |
 
 Two extra problems and roughly half the time at equal N. Measured against the other axes
 in this document — grammar redundancy worth ~10 % in time and nothing in reach,
@@ -68,6 +68,13 @@ is the strongest control by a clear margin.
 This also closes the comparison with `../max_n_climbs/`, which recorded max_10 at the
 same 300 s budget: those runs used `ROUND_TIME=120`, and `run_suite.jl` had been handing
 the whole budget to a single round. Nothing about the hardware or the specs was involved.
+Short rounds recover max_7 → max_9 here; the last step to max_10 sits inside the
+reproducibility band `../max_n_climbs/README.md` documents for N ≥ 8, where identical
+commands disagree because *where the timer cuts a round* changes what gets banked.
+
+Across every max_N cell the failing problem ends one constraint short — 8/9, 9/10, 10/11,
+11/12 — never further behind. The search reliably assembles all but the last obligation,
+which is the shape you would expect if the missing step is one more recombination.
 
 **For the write-up:** the partial-satisfaction score supplies the gradient, but it is the
 *frequency of recombination* that converts the gradient into reach. Any figure quoted
