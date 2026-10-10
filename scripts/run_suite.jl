@@ -143,14 +143,42 @@ function run_problem(fam::Family, n::Int, opts)
         max_cost      = opts.max_cost)
 end
 
+"""Header and one row per problem, appended as each problem finishes."""
+csv_header() = "family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size"
+
+function csv_row(fam::Family, opts, n::Int, r)
+    best = isempty(r.history) ? nothing : r.history[end]
+    join([fam.name, opts.tier, opts.granularity, opts.regime,
+          get(ENV, "EQUIV", "constraint"), opts.round_enum, n,
+          r.solved, r.round, round(r.time, digits = 2),
+          best === nothing ? 0 : best.score,
+          best === nothing ? 0 : best.n_total,
+          best === nothing ? 0 : best.size], ",")
+end
+
 function climb(fam::Family, opts)
     results = Tuple{Int,Any}[]
     prev = nothing
     consecutive_failures = 0
+    # The CSV is appended per problem rather than written at the end: a cell that is
+    # killed mid-climb (a wedged problem, an out-of-memory) otherwise loses every
+    # result it had already earned, which is exactly when the data matters most.
+    if opts.csv !== nothing
+        mkpath(dirname(opts.csv))
+        open(opts.csv, "w") do io
+            println(io, csv_header())
+        end
+    end
     for n in opts.from:opts.to
         opts = merge(opts, (; prev))
         r = run_problem(fam, n, opts)
         push!(results, (n, r))
+        if opts.csv !== nothing
+            open(opts.csv, "a") do io
+                println(io, csv_row(fam, opts, n, r))
+            end
+            flush(stdout)
+        end
         if r.solved
             println(">>> $(fam.name)_$n SOLVED in round $(r.round), $(round(r.time, digits=1))s")
             consecutive_failures = 0
@@ -193,22 +221,7 @@ function report(fam::Family, opts, results)
     end
     println("\n  highest solved: ", isempty(solved) ? "none" : "$(fam.name)_$(maximum(solved))")
 
-    if opts.csv !== nothing
-        mkpath(dirname(opts.csv))
-        open(opts.csv, "w") do io
-            println(io, "family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size")
-            for (n, r) in results
-                best = isempty(r.history) ? nothing : r.history[end]
-                println(io, join([fam.name, opts.tier, opts.granularity, opts.regime,
-                                  get(ENV, "EQUIV", "constraint"), opts.round_enum, n,
-                                  r.solved, r.round, round(r.time, digits=2),
-                                  best === nothing ? 0 : best.score,
-                                  best === nothing ? 0 : best.n_total,
-                                  best === nothing ? 0 : best.size], ","))
-            end
-        end
-        println("  CSV: $(opts.csv)")
-    end
+    opts.csv === nothing || println("  CSV: $(opts.csv)  (written per problem as the climb ran)")
     return results
 end
 
