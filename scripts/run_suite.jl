@@ -38,6 +38,11 @@
 #   --equiv       observational | constraint | both   (default constraint)
 #   --round-enum  enumerations per round              (default 200000)
 #   --problem-time per-problem wall-clock safety net, seconds (default 600)
+#   --round-time  wall-clock per round, seconds (default: the whole problem budget).
+#                 Smaller values force several rounds inside one problem, and a round
+#                 boundary is where the bank re-seeds the next round — the climbs
+#                 recorded in results/max_n_climbs/ used ROUND_TIME=120 inside a 300 s
+#                 problem cap, so reproducing them needs this set.
 #   --stop-after  consecutive failures before giving up (default 2)
 #   --csv         path for the per-problem summary CSV
 
@@ -134,7 +139,9 @@ function run_problem(fam::Family, n::Int, opts)
     return solve_spec(path;
         rounds        = opts.rounds,
         round_enum    = opts.round_enum,
-        round_time    = opts.problem_time,   # no inner wall-clock cut; ROUND_ENUM bounds the round
+        # By default the whole problem budget goes to one round and ROUND_ENUM is what
+        # ends it; --round-time cuts rounds shorter, which re-seeds more often.
+        round_time    = opts.round_time === nothing ? opts.problem_time : opts.round_time,
         max_total_time = opts.problem_time,
         grammar       = grammar,
         initial_seeds = seeds,
@@ -233,7 +240,7 @@ function parse_opts(args::Vector{String})
     family = nothing; tier = "d0"; granularity = "split"
     from = nothing; to = nothing
     regime = "chained"; equiv = "constraint"
-    round_enum = 200_000; problem_time = 600.0
+    round_enum = 200_000; problem_time = 600.0; round_time = nothing
     stop_after = 2; csv = nothing; rounds = nothing; max_cost = 6.0; top_k = 12
     i = 1
     while i <= length(args)
@@ -247,6 +254,7 @@ function parse_opts(args::Vector{String})
         elseif a == "--equiv";        equiv = args[i+1]; i += 2
         elseif a == "--round-enum";   round_enum = parse(Int, args[i+1]); i += 2
         elseif a == "--problem-time"; problem_time = parse(Float64, args[i+1]); i += 2
+        elseif a == "--round-time";   round_time = parse(Float64, args[i+1]); i += 2
         elseif a == "--stop-after";   stop_after = parse(Int, args[i+1]); i += 2
         elseif a == "--rounds";       rounds = parse(Int, args[i+1]); i += 2
         elseif a == "--max-cost";     max_cost = parse(Float64, args[i+1]); i += 2
@@ -261,7 +269,7 @@ function parse_opts(args::Vector{String})
     from = from === nothing ? first(fam.range) : from
     to   = to   === nothing ? last(fam.range)  : to
     ENV["EQUIV"] = equiv
-    return fam, (; tier, granularity, from, to, regime, round_enum, problem_time,
+    return fam, (; tier, granularity, from, to, regime, round_enum, problem_time, round_time,
                    stop_after, csv, max_cost, top_k, prev = nothing,
                    # One round per problem by default: with an enumeration bound rather
                    # than a timer, extra rounds only help when the bank gained seeds.
