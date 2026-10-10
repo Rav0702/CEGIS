@@ -2,12 +2,23 @@
 Data structures for SyGuS specifications and synthesis problems.
 """
 
-"""Synthesis function (synth-fun from SyGuS spec)."""
+"""
+Synthesis function (synth-fun from SyGuS spec).
+
+`grammar_sexp` holds the optional grammar body of the `synth-fun` command — the raw
+s-expression `(<nonterminal-decls> <production-groups>)`, as read by `read_sexprs`.
+It is empty for the (common) grammar-free form `(synth-fun f ((x Int)) Int)`, in which
+case the search grammar is derived from the logic by `GrammarBuilding.GrammarConfig`.
+See `GrammarBuilding.sygus_grammar_to_csgrammar` for the translation.
+"""
 struct SynthFun
     name   :: String                                   # Function name
     params :: Vector{Tuple{String,String}}             # [(param_name, sort), ...]
     sort   :: String                                   # Return sort
+    grammar_sexp :: Vector{Any}                        # Grammar body, or empty if none
 end
+
+SynthFun(name, params, sort) = SynthFun(name, params, sort, Any[])
 
 """Free variable or input parameter (declare-var)."""
 struct FreeVar

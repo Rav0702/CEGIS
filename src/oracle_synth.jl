@@ -28,7 +28,16 @@ function build_grammar_from_spec(spec_path::String; grammar_config=nothing, star
     # Step 1: Parse specification
     parser = Parsers.SyGuSParser()
     spec = Parsers.parse_spec(parser, spec_path)
-    
+
+    # Step 1b: A `synth-fun` that declares its own grammar wins over any logic-wide
+    # operation set — the benchmark file is the authority on its own search space.
+    # Only when an explicit `grammar_config` is passed does the caller override it.
+    if grammar_config === nothing && !isempty(spec.synth_funs) &&
+            GrammarBuilding.has_sygus_grammar(spec.synth_funs[1])
+        constants = GrammarBuilding.extract_numbers_from_spec(spec)
+        return GrammarBuilding.build_grammar_from_synth_fun(spec.synth_funs[1]; constants)
+    end
+
     # Step 2: Determine grammar config (auto-detect if not provided)
     if grammar_config === nothing
         if GrammarBuilding.is_lia_problem(spec)
