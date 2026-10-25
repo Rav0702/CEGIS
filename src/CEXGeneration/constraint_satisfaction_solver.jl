@@ -131,11 +131,40 @@ mutable struct ConstraintSatSolver
     param_names::Vector{String}
 end
 
-function ConstraintSatSolver(spec::Spec)
+"""
+    _csat_set_timeout!(ctx, solver, timeout_ms)
+
+Cap each `check-sat-assuming` at `timeout_ms` milliseconds.
+
+Without a cap a single query can run unboundedly, and one did: scoring a deeply nested
+`ifelse` candidate on `piecewise_10` sat inside Z3 at 100 % CPU for over 13 minutes,
+which the search cannot interrupt — `guided_partial_search` only tests its wall-clock
+budget between candidates, so the per-problem cap silently stops being enforced. A
+timed-out check returns `:unknown`, and `check_constraint_satisfaction` already counts
+anything that is not `:unsat` as unsatisfied, so the effect of a timeout is to treat the
+candidate as not proven for that constraint — conservative in the right direction.
+"""
+function _csat_set_timeout!(ctx::Z3.Context, solver::Z3.Solver, timeout_ms::Integer)
+    params = Z3.Libz3.Z3_mk_params(ctx.ctx)
+    sym = Z3.Libz3.Z3_mk_string_symbol(ctx.ctx, "timeout")
+    Z3.Libz3.Z3_params_set_uint(ctx.ctx, params, sym, UInt32(timeout_ms))
+    Z3.Libz3.Z3_solver_set_params(ctx.ctx, solver.solver, params)
+    return solver
+end
+
+"""
+Per-query Z3 budget in milliseconds for the partial-satisfaction scorer. Scoring is run
+once per constraint per candidate and tens of thousands of candidates are scored per
+round, so a query that needs seconds is already a query worth abandoning.
+"""
+const CSAT_TIMEOUT_MS = Ref(5_000)
+
+function ConstraintSatSolver(spec::Spec; timeout_ms::Integer = CSAT_TIMEOUT_MS[])
     isempty(spec.synth_funs) && error("ConstraintSatSolver: spec has no synth-fun")
     sf = spec.synth_funs[1]
     ctx = Z3.Context()
     solver = Z3.Solver(ctx)
+    timeout_ms > 0 && _csat_set_timeout!(ctx, solver, timeout_ms)
 
     varmap = Dict{String,Z3.Expr}()
     var_types = Dict{String,Symbol}()

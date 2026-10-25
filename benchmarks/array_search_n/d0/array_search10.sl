@@ -1,0 +1,33 @@
+(set-logic LIA)
+
+(synth-fun findIdx ((x0 Int) (x1 Int) (x2 Int) (x3 Int) (x4 Int) (x5 Int) (x6 Int) (x7 Int) (x8 Int) (x9 Int) (k Int)) Int
+  ((Start Int) (CondExpr Bool))
+  ((Start Int (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k 0 1 2 3 4 5 6 7 8 9 10 (ite CondExpr Start Start)))
+   (CondExpr Bool ((< Start Start) (<= Start Start) (> Start Start) (>= Start Start))))
+)
+
+(declare-var x0 Int)
+(declare-var x1 Int)
+(declare-var x2 Int)
+(declare-var x3 Int)
+(declare-var x4 Int)
+(declare-var x5 Int)
+(declare-var x6 Int)
+(declare-var x7 Int)
+(declare-var x8 Int)
+(declare-var x9 Int)
+(declare-var k Int)
+
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (< k x0)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 0)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x0) (< k x1)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 1)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x1) (< k x2)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 2)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x2) (< k x3)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 3)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x3) (< k x4)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 4)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x4) (< k x5)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 5)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x5) (< k x6)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 6)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x6) (< k x7)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 7)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x7) (< k x8)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 8)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x8) (< k x9)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 9)))
+(constraint (=> (and (< x0 x1) (< x1 x2) (< x2 x3) (< x3 x4) (< x4 x5) (< x5 x6) (< x6 x7) (< x7 x8) (< x8 x9) (> k x9)) (= (findIdx x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 k) 10)))
+
+(check-synth)

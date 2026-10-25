@@ -98,7 +98,12 @@ function parse_sl(filename::String)::Spec
                 end
             end
 
-            push!(spec.synth_funs, SynthFun(name, params, ret_sort))
+            # Optional grammar body: everything after the return sort. Either the
+            # two-element form (nonterminal-decls production-groups) of SyGuS-v2, or
+            # absent entirely. Kept raw; translated on demand by GrammarBuilding.
+            grammar_sexp = length(expr) > 4 ? Any[expr[k] for k in 5:length(expr)] : Any[]
+
+            push!(spec.synth_funs, SynthFun(name, params, ret_sort, grammar_sexp))
 
         elseif head == "constraint"
             if length(expr) > 1

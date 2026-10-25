@@ -1,6 +1,46 @@
 # CEGIS Benchmark Suite
 
-Comprehensive benchmark suite for program synthesis using the CEGIS (Counterexample-Guided Inductive Synthesis) approach.
+Benchmarks for program synthesis using the CEGIS (Counterexample-Guided Inductive
+Synthesis) approach.
+
+## Layout
+
+| Path | What it holds |
+|---|---|
+| `array_search_n/<tier>/` | **scalable family**, N = 2…15 — generated |
+| `piecewise_n/<tier>/` | **scalable family**, N = 2…12 — generated |
+| `max_n/<granularity>/<tier>/` | **scalable family**, N = 3…16, three constraint granularities — generated |
+| `max_n/max*.sl` | the original grammar-free max_N specs; kept so `results/max_n_climbs/` stays reproducible |
+| `formal/` | small hand-written specs with formal (non-example) constraints |
+| `micro/` | one-off three-difficulty problems (`easy`/`medium`/`hard`), driven by `validate_benchmarks.jl` |
+
+## Scalable families (generated)
+
+Regenerate with:
+
+```bash
+julia --project benchmarks/generate_suite.jl --validate            # tier d0, all families
+julia --project benchmarks/generate_suite.jl --tier d0,d1,d2       # the grammar-size axis
+```
+
+Every generated spec declares its own grammar in the `synth-fun` body, so the search
+space is a property of the benchmark rather than of whichever driver script runs it.
+`--validate` builds each family's reference solution as a program over the declared
+grammar and verifies it against the spec with Z3; a file that fails that gate is a spec
+bug, not a hard problem.
+
+Run a family's climb with:
+
+```bash
+julia --project scripts/run_suite.jl --family array_search --equiv constraint
+julia --project scripts/run_suite.jl --family max --granularity witness --regime independent
+```
+
+A family earns a place here only if its spec splits into many independently checkable
+constraints (so the partial-satisfaction score is graded, not 0/1) **and** solution_N
+embeds solution_{N-1} (so seed transfer between problems pays off). `min_N` is excluded
+deliberately: it is the dual of `max_N` and tests nothing new.
+
 
 ## Overview
 
@@ -17,37 +57,37 @@ Each problem has its own directory containing:
 ## Problem Categories
 
 ### 1. **Maximum Functions**
-- **Directory**: `max_two/`
+- **Directory**: `micro/max_two/`
 - **Description**: Find the maximum of two integers
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Comparison, Idempotence, Commutativity
 
 ### 2. **Absolute Value**
-- **Directory**: `abs_value/`
+- **Directory**: `micro/abs_value/`
 - **Description**: Compute absolute value of an integer
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Non-negativity, Symmetry, Triangle Inequality
 
 ### 3. **Conditional Sum**
-- **Directory**: `conditional_sum/`
+- **Directory**: `micro/conditional_sum/`
 - **Description**: Conditional aggregation with multiple branches
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Branching logic, Nested conditions, Multi-variable constraints
 
 ### 4. **Maximum of Three**
-- **Directory**: `find_max_three/`
+- **Directory**: `micro/find_max_three/`
 - **Description**: Find maximum of three integers
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Commutativity, Associativity, Transitivity, Ordering
 
 ### 5. **Sign Function**
-- **Directory**: `sign_function/`
+- **Directory**: `micro/sign_function/`
 - **Description**: Classify value as negative (-1), zero (0), or positive (1)
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Classification, Antisymmetry, Multiplication properties
 
 ### 6. **Clamp Value**
-- **Directory**: `clamp_value/`
+- **Directory**: `micro/clamp_value/`
 - **Description**: Constrain value to bounds with fixed or variable ranges
 - **Difficulty**: Easy < Medium < Hard
 - **Key Properties**: Range enforcement, Monotonicity, Idempotence
@@ -58,19 +98,19 @@ Each problem has its own directory containing:
 - **Synthesis space**: Small
 - **Expected time**: < 1 second
 - **Use case**: Testing basic synthesis pipeline, quick regression tests
-- **Examples**: max_two/easy.sl, abs_value/easy.sl
+- **Examples**: micro/max_two/easy.sl, micro/abs_value/easy.sl
 
 ### Medium Problems
 - **Synthesis space**: Medium
 - **Expected time**: 1-10 seconds
 - **Use case**: Feature verification, property testing
-- **Examples**: max_two/medium.sl, conditional_sum/medium.sl
+- **Examples**: micro/max_two/medium.sl, micro/conditional_sum/medium.sl
 
 ### Hard Problems
 - **Synthesis space**: Large (100K+ candidates)
 - **Expected time**: 10-120 seconds
 - **Use case**: Performance benchmarking, stress testing, solver evaluation
-- **Examples**: find_max_three/hard.sl, clamp_value/hard.sl
+- **Examples**: micro/find_micro/max_three/hard.sl, micro/clamp_value/hard.sl
 
 ## SyGuS Logic Track
 
@@ -105,8 +145,8 @@ All specifications use **LIA (Linear Integer Arithmetic)** with conditional logi
 ```bash
 julia --project
 julia> include("src/CEGIS.jl")
-julia> problem = CEGIS.CEGISProblem("benchmarks/max_two/easy.sl")
-julia> grammar = CEGIS.build_grammar_from_spec("benchmarks/max_two/easy.sl")
+julia> problem = CEGIS.CEGISProblem("benchmarks/micro/micro/max_two/easy.sl")
+julia> grammar = CEGIS.build_grammar_from_spec("benchmarks/micro/micro/max_two/easy.sl")
 julia> result = CEGIS.run_synthesis(problem, iterator)
 ```
 

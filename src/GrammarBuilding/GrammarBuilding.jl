@@ -13,6 +13,8 @@ using HerbGrammar
 
 # Import parent modules needed by included files
 include("GrammarConfig.jl")
+include("SyGuSGrammar.jl")   # per-problem grammars declared in the synth-fun body
+include("RuleNodeRemap.jl")  # carrying programs between two problems' grammars
 
 # Export public API
 export
@@ -36,6 +38,16 @@ export
     
     # Helper functions
     is_lia_problem,
+
+    # SyGuS synth-fun grammar bodies
+    has_sygus_grammar,
+    sygus_grammar_parts,
+    sygus_grammar_to_csgrammar,
+    build_grammar_from_synth_fun,
+
+    # Cross-grammar program transfer
+    remap_rulenode_by_expression,
+    try_remap_rulenode,
     
     # Convenience functions
     default_grammar_config,

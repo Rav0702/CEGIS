@@ -1,0 +1,13 @@
+family,tier,granularity,regime,equiv,round_enum,n,solved,rounds,time_s,best_score,n_constraints,size
+array_search,d0,split,chained,both,200000,2,true,2,12.58,3,3,16
+array_search,d0,split,chained,both,200000,3,true,1,1.1,4,4,21
+array_search,d0,split,chained,both,200000,4,true,1,17.82,5,5,26
+array_search,d0,split,chained,both,200000,5,true,1,47.3,6,6,31
+array_search,d0,split,chained,both,200000,6,true,1,67.35,7,7,36
+array_search,d0,split,chained,both,200000,7,true,1,104.16,8,8,41
+array_search,d0,split,chained,both,200000,8,true,1,190.07,9,9,46
+array_search,d0,split,chained,both,200000,9,true,1,133.62,10,10,51
+array_search,d0,split,chained,both,200000,10,true,1,185.35,11,11,56
+array_search,d0,split,chained,both,200000,11,true,1,275.05,12,12,61
+array_search,d0,split,chained,both,200000,12,false,30,300.04,12,13,56
+array_search,d0,split,chained,both,200000,13,false,30,300.0,13,14,61

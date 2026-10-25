@@ -28,7 +28,16 @@ function build_grammar_from_spec(spec_path::String; grammar_config=nothing, star
     # Step 1: Parse specification
     parser = Parsers.SyGuSParser()
     spec = Parsers.parse_spec(parser, spec_path)
-    
+
+    # Step 1b: A `synth-fun` that declares its own grammar wins over any logic-wide
+    # operation set — the benchmark file is the authority on its own search space.
+    # Only when an explicit `grammar_config` is passed does the caller override it.
+    if grammar_config === nothing && !isempty(spec.synth_funs) &&
+            GrammarBuilding.has_sygus_grammar(spec.synth_funs[1])
+        constants = GrammarBuilding.extract_numbers_from_spec(spec)
+        return GrammarBuilding.build_grammar_from_synth_fun(spec.synth_funs[1]; constants)
+    end
+
     # Step 2: Determine grammar config (auto-detect if not provided)
     if grammar_config === nothing
         if GrammarBuilding.is_lia_problem(spec)
@@ -52,13 +61,13 @@ signature as HerbSearch.synth() for consistency, with multiple dispatch handling
 different problem types.
 ```
 
-**Differences from synth()**:
+Differences from synth():
 - CEGISProblem path returns CEGISResult (with iterations and counterexamples)
 - Generic Problem path delegates to HerbSearch.synth() (returns Tuple{RuleNode, SynthResult})
 - CEGISProblem path uses oracle for formal verification
 - Generic Problem path uses specification examples for evaluation
 
-**See also**: run_synthesis(::Problem, ::ProgramIterator), build_grammar_from_spec()
+See also: run_synthesis(::Problem, ::ProgramIterator), build_grammar_from_spec()
 """
 function run_synthesis(
     problem::CEGISProblem,
@@ -69,7 +78,8 @@ function run_synthesis(
     max_enumerations::Int = typemax(Int),
     mod::Module = Main,
     eval_fn::Union{Function, Nothing} = nothing,
-    use_direct_conversion::Bool = false) :: CEGISResult
+    use_direct_conversion::Bool = false,
+    log_every::Int = 0) :: CEGISResult
     
     # Extract grammar from iterator
     grammar = HerbSearch.get_grammar(iterator)
@@ -96,6 +106,7 @@ function run_synthesis(
         iterator = iterator,
         desired_solution = problem.desired_solution,
         eval_fn = eval_fn,
+        log_every = log_every,
     )
     
     return result_tuple.result
@@ -122,9 +133,9 @@ function run_synthesis(
     )
 end
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # LEGACY: Original oracle-driven synthesis (kept for backward compatibility)
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 
 """
@@ -132,9 +143,9 @@ end
 
 Synthesis loop with oracle-driven CEGIS. 
 
-**Returns**: `(result=CEGISResult, satisfied_examples=Int)` — NamedTuple with synthesis result
+Returns: `(result=CEGISResult, satisfied_examples=Int)` — NamedTuple with synthesis result
 
-**KeywordArguments**:
+KeywordArguments:
 - `iterator` — Optional pre-constructed iterator. If not provided, creates BFSIterator.
 - `desired_solution` — Optional target solution string for debug logging
 - `eval_fn` — Optional custom evaluation function (for CustomInterpreterOracle)
@@ -145,7 +156,8 @@ function synth_with_oracle(
     shortcircuit::Bool=true, allow_evaluation_errors::Bool=false, mod::Module=Main,
     iterator::Union{Any, Nothing}=nothing,
     desired_solution::Union{String, Nothing}=nothing,
-    eval_fn::Union{Function, Nothing}=nothing
+    eval_fn::Union{Function, Nothing}=nothing,
+    log_every::Int=0
 )
     start_time = time()
     termination_reason = "iterator_exhausted"
@@ -181,7 +193,12 @@ function synth_with_oracle(
 
     for candidate_program in iterator
         num_enum += 1
-        
+
+        if log_every > 0 && num_enum % log_every == 0
+            elapsed = round(time() - start_time, digits=1)
+            println("[progress] enum=$num_enum  cex=$(length(counterexamples))  best_satisfied=$global_best_satisfied  elapsed=$(elapsed)s")
+        end
+
         if num_enum > max_enumerations
             println("[enum=$num_enum] Reached max_enumerations limit ($max_enumerations)")
             termination_reason = "max_enumerations"
