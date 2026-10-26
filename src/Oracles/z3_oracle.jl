@@ -49,6 +49,7 @@ mutable struct Z3Oracle <: AbstractOracle
     test_candidate::Union{String,Nothing}  # Candidate to test at enumeration 1000
     parser::CEXGeneration.AbstractCandidateParser  # Pluggable candidate parser
     use_direct_conversion::Bool  # Use direct RuleNode→SMT-LIB2 (true) or multi-stage (false)
+    last_status::Symbol          # verdict of the last extract_counterexample: :unsat :sat :unknown :error
 end
 
 """
@@ -100,7 +101,7 @@ function Z3Oracle(
         end
     end
     
-    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing, parser, use_direct_conversion)
+    return Z3Oracle(spec_file, spec, grammar, z3_ctx, z3_vars, mod, 0, nothing, parser, use_direct_conversion, :none)
 end
 
 """
@@ -115,6 +116,7 @@ function extract_counterexample(
     problem,
     candidate::RuleNode
 )::Union{Counterexample, Nothing}
+    oracle.last_status = :error        # until a verdict is reached; see candidate_verified
     try
         # Increment enumeration counter
         oracle.enum_count += 1
@@ -176,6 +178,7 @@ function extract_counterexample(
         
         # If unsat, candidate is valid (no counterexample)
         if result.status == :unsat
+            oracle.last_status = :unsat
             return nothing
         end
         
@@ -183,6 +186,7 @@ function extract_counterexample(
         # Treat this as invalid candidate - skip it
         if result.status == :unknown
             println("  [SKIPPED: Z3 had an error - likely type mismatch]")
+            oracle.last_status = :unknown    # NOT a proof: candidate_verified is false
             return nothing
         end
         
@@ -215,6 +219,7 @@ function extract_counterexample(
             expected_output = get(result.model, fresh_const_name, 0)  # Default to 0 if not in model
             
             # Return counterexample
+            oracle.last_status = :sat
             return Counterexample(input_dict, expected_output, nothing)
         end
         
@@ -227,6 +232,9 @@ function extract_counterexample(
         return nothing
     end
 end
+
+"""Only an `unsat` verdict proves the candidate; `unknown` and conversion errors also return `nothing`."""
+candidate_verified(oracle::Z3Oracle) = oracle.last_status === :unsat
 
 """
 TBH I think it is not needed now as we convert it elsewhere, but lets keep it

@@ -66,11 +66,16 @@ function _rulenode_to_smt_impl(
     expected_type::Symbol = :int
 )::String
     
+    # A rule whose right-hand side is a whole term (a spec-enriched grammar's
+    # `Start = ifelse(g, t, Start)`): render its expression, children in place.
+    _is_compound_rule(grammar.rules[node.ind], grammar) &&
+        return _compound_rule_to_smt(node, grammar, expected_type)
+
     # Terminal node (leaf)
     if isempty(node.children)
         rule_idx = node.ind
         rule_expr = grammar.rules[rule_idx]  # Direct expression from grammar
-        
+
         smt, typ = _terminal_to_smt(rule_expr, grammar, rule_idx)
         
         # Coerce type if needed
@@ -90,6 +95,12 @@ function _rulenode_to_smt_impl(
         op_name = rule_expr
     elseif isa(rule_expr, Expr) && rule_expr.head == :call
         op_name = rule_expr.args[1]
+    elseif isa(rule_expr, Expr) && rule_expr.head in (:&&, :||)
+        # Grammars built from a SyGuS grammar block write `and`/`or` as Julia's
+        # short-circuit forms, which are Expr heads, not calls. Unhandled until
+        # 2026-09-27: every program using them failed conversion, so it could
+        # never be verified (and test-perfect ones were discarded as Inf).
+        op_name = rule_expr.head === :&& ? :and : :or
     else
         op_name = rule_expr
     end
@@ -114,7 +125,7 @@ function _rulenode_to_smt_impl(
         return _handle_comparison(node, grammar, op_name, expected_type)
     elseif op_name ∈ (:and, :or)
         return _handle_boolean(node, grammar, op_name, expected_type)
-    elseif op_name == :not
+    elseif op_name == :not || op_name == :!     # SyGuS `not` is built as Julia `!`
         return _handle_not(node, grammar, expected_type)
     else
         # Unknown operator: try as-is
@@ -282,6 +293,72 @@ function _handle_not(
     end
     
     return result
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPOUND RULES
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+A rule is compound when its right-hand side is an operator applied to anything
+other than non-terminals: a nested term (`ifelse((x >= y) && (x >= z), x, Expr)`)
+or an atom (`x + 1`). Ordinary rules apply one operator to non-terminals only
+(`Expr + Expr`, `ifelse(BoolExpr, Expr, Expr)`), so they keep the paths below;
+the rules routed here would have failed there.
+"""
+function _is_compound_rule(rule, grammar::AbstractGrammar)
+    rule isa Expr || return false
+    args = rule.head === :call ? rule.args[2:end] : rule.args
+    return !all(a -> a isa Symbol && haskey(grammar.bytype, a), args)
+end
+
+const _SMT_CMP = Dict(:(>) => ">", :(<) => "<", :(>=) => ">=", :(<=) => "<=", :(==) => "=")
+
+"""
+Render a compound rule's expression. Non-terminal symbols take the node's
+children depth-first, left to right, exactly as `HerbGrammar.rulenode2expr`
+substitutes them.
+"""
+function _compound_rule_to_smt(node::RuleNode, grammar::AbstractGrammar, expected_type::Symbol)::String
+    next = Ref(0)
+    function go(e)::Tuple{String,Symbol}
+        if e isa Symbol && haskey(grammar.bytype, e)
+            child = node.children[next[] += 1]
+            t = grammar.types[child.ind] === :BoolExpr ? :bool : :int
+            return (_rulenode_to_smt_impl(child, grammar, t), t)
+        elseif e isa Bool
+            return (e ? "true" : "false", :bool)
+        elseif e isa Integer
+            return (e < 0 ? "(- $(abs(e)))" : string(e), :int)
+        elseif e isa Symbol
+            return _terminal_to_smt(e, grammar, node.ind)
+        elseif e isa Expr && e.head in (:&&, :||)
+            a, b = (_coerce_type(go(x)..., :bool) for x in e.args)
+            return ("($(e.head === :&& ? "and" : "or") $a $b)", :bool)
+        elseif e isa Expr && e.head === :call
+            op, args = e.args[1], e.args[2:end]
+            if op === :ifelse
+                c = _coerce_type(go(args[1])..., :bool)
+                (s1, t1), (s2, t2) = go(args[2]), go(args[3])
+                t = t1 === :bool && t2 === :bool ? :bool : :int
+                return ("(ite $c $(_coerce_type(s1, t1, t)) $(_coerce_type(s2, t2, t)))", t)
+            elseif op === :!
+                return ("(not $(_coerce_type(go(args[1])..., :bool)))", :bool)
+            elseif op in (:+, :-, :*)
+                xs = [_coerce_type(go(a)..., :int) for a in args]
+                return ("($op $(join(xs, ' ')))", :int)
+            elseif haskey(_SMT_CMP, op) || op === :!=
+                a, b = (_coerce_type(go(x)..., :int) for x in args)
+                s = op === :!= ? "(distinct $a $b)" : "($(_SMT_CMP[op]) $a $b)"
+                return (s, :bool)
+            end
+        end
+        error("unsupported compound rule term: $e")
+    end
+    s, t = go(grammar.rules[node.ind])
+    next[] == length(node.children) ||
+        error("compound rule $(grammar.rules[node.ind]) used $(next[]) of $(length(node.children)) children")
+    return _coerce_type(s, t, expected_type)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────

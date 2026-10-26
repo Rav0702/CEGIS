@@ -35,3 +35,13 @@ function extract_counterexample(
 ) :: Union{Counterexample, Nothing}
     error("extract_counterexample is not implemented for $(typeof(oracle)).")
 end
+
+"""
+    candidate_verified(oracle) -> Bool
+
+After `extract_counterexample` returned `nothing`: was the candidate actually proved correct? An oracle
+that can fail to decide (a solver `unknown`, a conversion error) returns `nothing` in those cases too, so
+the CEGIS loop must accept a candidate only when this is `true`. Default `true`: oracles that return
+`nothing` only for a passing candidate need not override it.
+"""
+candidate_verified(::AbstractOracle) = true

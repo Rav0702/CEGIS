@@ -11,8 +11,6 @@ The Oracles module aggregates all concrete oracle implementations used for verif
 - **abstract_oracle.jl** — Abstract base type and interface definition
 - **ioexample_oracle.jl** — Test-based oracle using I/O examples
 - **z3_oracle.jl** — Z3 SMT solver-based oracle for formal verification
-- **semantic_smt_oracle.jl** — Alternative SMT oracle implementation
-- **stub_oracle.jl** — Stub oracle for testing and prototyping
 
 ## Oracle Interface
 
@@ -47,15 +45,6 @@ This method takes a candidate program and returns:
   - Produces rigorous proofs
   - Can be slow for complex formulas
   - Requires CEXGeneration module for query generation
-
-### SemanticSMTOracle
-- **Purpose**: Alternative SMT-based verification approach
-- **Similar to**: Z3Oracle but potentially different query generation strategy
-
-### StubOracle
-- **Purpose**: Testing and prototyping
-- **Simulates**: Oracle behavior without real verification
-- **Use case**: Debugging CEGIS loop logic
 
 ## Oracle Selection in CEGIS
 

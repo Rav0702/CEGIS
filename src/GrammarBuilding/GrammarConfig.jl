@@ -39,7 +39,9 @@ using Logging
 Default base operations for integer arithmetic synthesis.
 
 **Included**:
-- Constants: 0, 1, 2, -1
+- Constants: not taken from this set. The generated grammar always has 0 and 1, plus the integers the spec
+  mentions (`generate_grammar_string`; `flatten_operations` skips `:constants`). The entry stays because
+  removing a key can change the Dict's iteration order, and with it the order of the generated rules.
 - Binary arithmetic: +, -, *
 - Unary arithmetic: - (negation)
 - Comparisons: <, >, <=, >=, ==
@@ -66,13 +68,15 @@ const BASE_OPERATIONS = Dict(
 Operations for Linear Integer Arithmetic (LIA) synthesis.
 
 **Included** (valid for integer-only synthesis):
-- Constants: 0, 1, 2, -1
+- Constants: not taken from this set. The generated grammar always has 0 and 1, plus the integers the spec
+  mentions (`generate_grammar_string`; `flatten_operations` skips `:constants`). The entry stays because
+  removing a key can change the Dict's iteration order, and with it the order of the generated rules.
 - Binary arithmetic: +, -, * (subtraction and multiplication)
 - Comparisons: <, >, <=, >=, == (produce boolean guards)
 - Control: ifelse (conditional branching)
 
 **Excluded** (not valid for LIA):
-- Unary arithmetic: unary negation (not needed, constants include -1)
+- Unary arithmetic: unary negation (not needed: `0 - x`)
 - Logical: &&, ||, ! (these are for boolean synthesis, not integer evaluation)
 - Bitwise: &, |, ~ (these require bitwidth semantics)
 - Modulo: % (optional for LIA, excluded for simplicity)

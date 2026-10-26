@@ -11,8 +11,12 @@ module GrammarBuilding
 using HerbCore
 using HerbGrammar
 
+# Sibling submodule: SyGuS spec parsing (grammar sections, s-expression helpers).
+using ..CEXGeneration
+
 # Import parent modules needed by included files
 include("GrammarConfig.jl")
+include("SygusGrammar.jl")
 
 # Export public API
 export
@@ -37,6 +41,13 @@ export
     # Helper functions
     is_lia_problem,
     
+    # SyGuS-declared grammars (for literature-comparable runs)
+    build_grammar_from_sygus,
+    build_grammar_auto,
+    sygus_start_symbol,
+    parse_sygus_grammar,
+    SYGUS_OP_MAP,
+
     # Convenience functions
     default_grammar_config,
     lia_grammar_config,

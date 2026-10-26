@@ -23,6 +23,7 @@ Converts SyGuS-v2 specifications and candidate solutions to SMT-LIB2 queries for
 
 module CEXGeneration
 
+export z3_stats, z3_stats_diff, reset_z3_stats!
 export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        candidate_to_smt2, serialize_spec, deserialize_spec,
        verify_query, Z3Result, format_result,
@@ -31,7 +32,10 @@ export Spec, SynthFun, FreeVar, parse_spec_from_file, generate_cex_query,
        rulenode_to_smt2, generate_constraint_check_query,
        ConstraintSatResult, generate_satisfaction_query, check_constraint_satisfaction,
        n_satisfied, all_satisfied, satisfied_indices, violated_indices,
-       ConstraintSatSolver
+       ConstraintSatSolver, CexSolver, find_counterexample,
+       check_constraint_satisfaction_witnesses, complete_output,
+       output_is_unique, spec_single_answer,
+       eval_constraint_pointwise, PointwiseError
 
 using Z3
 
@@ -40,9 +44,12 @@ include("sexp.jl")
 include("parser.jl")
 include("candidates.jl")
 include("query.jl")
+include("z3_stats.jl")
 include("z3_verify.jl")
 include("constraint_satisfaction.jl")
 include("constraint_satisfaction_solver.jl")
+include("cex_solver.jl")
+include("constraint_pointwise.jl")
 include("rulenode_to_smt.jl")
 include("graded.jl")
 

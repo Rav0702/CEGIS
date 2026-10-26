@@ -125,6 +125,23 @@ function substitute_params(
 end
 
 """
+True when every application of `sfun_name` in `constraint` has exactly the first `arity` declared variables as
+its arguments, in order (the single-invocation form). Unparseable constraints count as non-canonical.
+"""
+function _canonical_calls_only(constraint::AbstractString, sfun_name::AbstractString,
+                               free_var_names::Vector{String}, arity::Int)::Bool
+    canon = free_var_names[1:min(arity, length(free_var_names))]
+    ok(s) = s isa AbstractString ||
+            (s isa Vector && !isempty(s) &&
+             (s[1] == sfun_name ? (String.(string.(s[2:end])) == canon) : all(ok, s[2:end])))
+    try
+        return all(ok, read_sexprs(constraint))
+    catch
+        return false
+    end
+end
+
+"""
 Detect if an SMT-LIB2 expression is likely a boolean (comparison or logical operator).
 
 Note: `ite` (ifelse) is NOT included because it returns Int when both branches are Int.
@@ -248,9 +265,17 @@ function generate_query(spec::Spec, candidate_exprs::Dict{String,String})::Strin
     # Assert spec constraints with fresh constants substituted
     for sfun in spec.synth_funs
         fresh_name = get_fresh_const_name(sfun)
-        
-        # Only process constraints that mention this function
-        constraints_for_func = filter(c -> contains(c, "($(sfun.name)"), spec.constraints)
+
+        # Only process constraints that mention this function, and only those that apply it to exactly the
+        # declared variables. A constraint such as f(x+1, y) = f(x, y) + 2, f(x, y) = f(y, x) or f(1, 5) = 5 would
+        # have every call replaced by the same fresh constant (out = out + 2, out = 5, ...): that premise is not
+        # "a valid output exists at this input" and can exclude every input of a region from the search, so a
+        # candidate wrong there was reported verified (2026-10-03, spec_files/partial_knowledge/recur3.sl).
+        # Dropping such constraints from the premise keeps it sound for any realizable spec.
+        constraints_for_func = filter(c -> contains(c, "($(sfun.name)") &&
+                                            _canonical_calls_only(c, sfun.name, [fv.name for fv in spec.free_vars],
+                                                                  length(sfun.params)),
+                                      spec.constraints)
         
         if !isempty(constraints_for_func)
             push!(query_parts, "; Spec constraints for $(sfun.name) (valid outputs: $fresh_name)")

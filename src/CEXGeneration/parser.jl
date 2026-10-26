@@ -98,7 +98,12 @@ function parse_sl(filename::String)::Spec
                 end
             end
 
-            push!(spec.synth_funs, SynthFun(name, params, ret_sort))
+            # Anything after the return sort is the (optional) grammar section.
+            gram = length(expr) > 4 ? Vector{Any}(expr[5:end]) : nothing
+            gram !== nothing && length(gram) == 1 && gram[1] isa Vector &&
+                (gram = Vector{Any}(gram[1]))   # unwrap the usual single-list form
+
+            push!(spec.synth_funs, SynthFun(name, params, ret_sort, gram))
 
         elseif head == "constraint"
             if length(expr) > 1
@@ -108,63 +113,8 @@ function parse_sl(filename::String)::Spec
 
         end
 
-        # Not yet tested: The syntax looks weird and we haven't found good examples of this in the benchmarks, so leaving it for now. We can add support later if needed.
-
-        # elseif head == "inv-constraint"
-        #     # Handle invariant constraints: (inv-constraint inv pre post trans)
-        #     if length(expr) >= 5
-        #         inv_name = String(expr[2])
-        #         pre_name = String(expr[3])
-        #         post_expr = expr[4]
-        #         post_name = isa(post_expr, Vector) ? sexp_to_str(post_expr) : String(post_expr)
-        #         trans_expr = expr[5]
-        #         trans = isa(trans_expr, Vector) ? sexp_to_str(trans_expr) : String(trans_expr)
-
-        #         # Find the invariant synthesis function to get its parameters
-        #         inv_found = false
-        #         for sfun in spec.synth_funs
-        #             if sfun.name == inv_name
-        #                 inv_found = true
-        #                 params = sfun.params
-
-        #                 # Build pre-condition: inv(x) => ¬pre(x)
-        #                 inv_call = "(" * inv_name
-        #                 for (pname, _) in params
-        #                     inv_call *= " " * pname
-        #                 end
-        #                 inv_call *= ")"
-
-        #                 pre_constr = "(=> $inv_call (not ($pre_name "
-        #                 pre_constr *= join([pname for (pname, _) in params], " ")
-        #                 pre_constr *= ")))"
-        #                 push!(spec.constraints, pre_constr)
-
-        #                 # Build transition: inv(x) ∧ trans(x,x') => inv(x')
-        #                 trans_constr = "(=> (and $inv_call ($trans "
-        #                 trans_constr *= join([pname for (pname, _) in params], " ")
-        #                 trans_constr *= " "
-        #                 trans_constr *= join([pname * "'" for (pname, _) in params], " ")
-        #                 trans_constr *= ")) (" * inv_name
-        #                 trans_constr *= " "
-        #                 trans_constr *= join([pname * "'" for (pname, _) in params], " ")
-        #                 trans_constr *= "))"
-        #                 push!(spec.constraints, trans_constr)
-
-        #                 # Build post-condition: inv(x) => ¬post(x) or inv(x) => post(x)
-        #                 if isa(post_name, String) && startswith(post_name, "(not ")
-        #                     post_constr = "(=> $inv_call $post_name)"
-        #                 else
-        #                     post_constr = "(=> $inv_call (not ($post_name "
-        #                     post_constr *= join([pname for (pname, _) in params], " ")
-        #                     post_constr *= ")))"
-        #                 end
-        #                 push!(spec.constraints, post_constr)
-
-        #                 break
-        #             end
-        #         end
-        #     end
-        # end
+        # `inv-constraint` (SyGuS invariant synthesis) is not supported: the form is ignored, so it adds no
+        # constraint. Invariant synthesis is future work (spec_knowledge/FULL_SCALE_PLAN.md, D4).
        i += 1
     end
 

@@ -36,4 +36,5 @@ export
     Z3Oracle,
     
     # Oracle interface
-    extract_counterexample
+    extract_counterexample,
+    candidate_verified

@@ -103,24 +103,41 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
-    GrammarSubtreeMutation(grammar, subtree_depth, depth_cap)
+Normalize an offspring tree when the operator has normalization enabled.
+Semantics-preserving, never grows the tree — see `normalize.jl`.
+"""
+_maybe_normalize(t::RuleNode, grammar::AbstractGrammar,
+                 ops::Union{GrammarOps,Nothing})::RuleNode =
+    ops === nothing ? t : normalize_program(t, grammar, ops)
+
+"""
+    GrammarSubtreeMutation(grammar, subtree_depth, depth_cap; normalize=false)
 
 Baseline / fallback mutation: replace a uniformly-random subtree with a fresh
 type-matched grammar subtree. Offspring exceeding `depth_cap` are rejected
 (parent returned unchanged) to keep Z3 queries small.
+
+With `normalize=true` the offspring is reduced to its semantic normal form
+before being returned, so meaningless structure (`x*0`, `ifelse(p,a,a)`,
+`a>=a`) never enters the population in the first place.
 """
 struct GrammarSubtreeMutation <: Arborist.AbstractMutationOperator
     grammar::AbstractGrammar
     subtree_depth::Int
     depth_cap::Int
+    ops::Union{GrammarOps,Nothing}
 end
+
+GrammarSubtreeMutation(grammar, subtree_depth, depth_cap; normalize::Bool=false) =
+    GrammarSubtreeMutation(grammar, subtree_depth, depth_cap,
+                           normalize ? GrammarOps(grammar) : nothing)
 
 function Arborist.mutate(op::GrammarSubtreeMutation, g::RuleNodeGenome, rng::AbstractRNG)
     t = deepcopy(g.tree)
     locs = _all_nodelocs(t)
     _replace_at!(t, rand(rng, locs), op.grammar, op.subtree_depth)
     depth(t) > op.depth_cap && return g
-    return RuleNodeGenome(t, g.grammar, g.start_symbol)
+    return RuleNodeGenome(_maybe_normalize(t, op.grammar, op.ops), g.grammar, g.start_symbol)
 end
 
 """
@@ -172,16 +189,21 @@ function Arborist.mutate(op::CounterexampleTargetedMutation, g::RuleNodeGenome, 
 end
 
 """
-    GrammarSubtreeCrossover(grammar, depth_cap)
+    GrammarSubtreeCrossover(grammar, depth_cap; normalize=false)
 
 Typed subtree crossover: pick a node in parent 1, a type-matching node in
 parent 2, and swap. Offspring exceeding `depth_cap` are discarded (parents
-returned).
+returned). `normalize=true` reduces both offspring to normal form.
 """
 struct GrammarSubtreeCrossover <: Arborist.AbstractCrossoverOperator
     grammar::AbstractGrammar
     depth_cap::Int
+    ops::Union{GrammarOps,Nothing}
 end
+
+GrammarSubtreeCrossover(grammar, depth_cap; normalize::Bool=false) =
+    GrammarSubtreeCrossover(grammar, depth_cap,
+                            normalize ? GrammarOps(grammar) : nothing)
 
 function Arborist.crossover(op::GrammarSubtreeCrossover, g1::RuleNodeGenome,
                             g2::RuleNodeGenome, rng::AbstractRNG)
@@ -200,6 +222,6 @@ function Arborist.crossover(op::GrammarSubtreeCrossover, g1::RuleNodeGenome,
     insert!(t2, loc2, sub1)
 
     (depth(t1) > op.depth_cap || depth(t2) > op.depth_cap) && return (g1, g2)
-    return (RuleNodeGenome(t1, g1.grammar, g1.start_symbol),
-            RuleNodeGenome(t2, g2.grammar, g2.start_symbol))
+    return (RuleNodeGenome(_maybe_normalize(t1, op.grammar, op.ops), g1.grammar, g1.start_symbol),
+            RuleNodeGenome(_maybe_normalize(t2, op.grammar, op.ops), g2.grammar, g2.start_symbol))
 end

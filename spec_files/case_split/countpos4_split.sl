@@ -1,0 +1,45 @@
+; countpos4_split.sl — count of positive inputs among 4, as a 16-way CASE SPLIT.
+;
+; Written like the reference CDGP's CountPositive3.sl (one guarded constraint per sign
+; pattern, see spec_files/paired/cdgp/countpos3.sl); the reference's CountPositive4.sl is
+; instead a single functional constraint through a define-fun, which is outside the
+; in-process solvers' scope. This 16-case form is our construction.
+; Grammar: the CDGP-paper LIA grammar. Single-answer (the 16 guards cover every input).
+
+(set-logic LIA)
+
+(synth-fun countpos4 ( (x Int) (y Int) (z Int) (w Int) ) Int
+    ((Start Int (x y z w 0 1
+                 (+ Start Start)
+                 (- Start Start)
+                 (ite StartBool Start Start)))
+     (StartBool Bool ((and StartBool StartBool)
+                      (or  StartBool StartBool)
+                      (not StartBool)
+                      (<=  Start Start)
+                      (=   Start Start)
+                      (>=  Start Start)))))
+
+(declare-var x Int)
+(declare-var y Int)
+(declare-var z Int)
+(declare-var w Int)
+
+(constraint (=> (and (<= x 0) (<= y 0) (<= z 0) (<= w 0)) (= (countpos4 x y z w) 0)))
+(constraint (=> (and (> x 0) (<= y 0) (<= z 0) (<= w 0)) (= (countpos4 x y z w) 1)))
+(constraint (=> (and (<= x 0) (> y 0) (<= z 0) (<= w 0)) (= (countpos4 x y z w) 1)))
+(constraint (=> (and (> x 0) (> y 0) (<= z 0) (<= w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (<= x 0) (<= y 0) (> z 0) (<= w 0)) (= (countpos4 x y z w) 1)))
+(constraint (=> (and (> x 0) (<= y 0) (> z 0) (<= w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (<= x 0) (> y 0) (> z 0) (<= w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (> x 0) (> y 0) (> z 0) (<= w 0)) (= (countpos4 x y z w) 3)))
+(constraint (=> (and (<= x 0) (<= y 0) (<= z 0) (> w 0)) (= (countpos4 x y z w) 1)))
+(constraint (=> (and (> x 0) (<= y 0) (<= z 0) (> w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (<= x 0) (> y 0) (<= z 0) (> w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (> x 0) (> y 0) (<= z 0) (> w 0)) (= (countpos4 x y z w) 3)))
+(constraint (=> (and (<= x 0) (<= y 0) (> z 0) (> w 0)) (= (countpos4 x y z w) 2)))
+(constraint (=> (and (> x 0) (<= y 0) (> z 0) (> w 0)) (= (countpos4 x y z w) 3)))
+(constraint (=> (and (<= x 0) (> y 0) (> z 0) (> w 0)) (= (countpos4 x y z w) 3)))
+(constraint (=> (and (> x 0) (> y 0) (> z 0) (> w 0)) (= (countpos4 x y z w) 4)))
+
+(check-synth)

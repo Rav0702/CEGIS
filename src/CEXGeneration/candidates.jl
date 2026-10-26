@@ -75,7 +75,7 @@ function tokenise_infix(src::String)::Vector{String}
             prev = isempty(tokens) ? "" : tokens[end]
             if prev ∈ ("", "(", ",", "then", "else",
                         "+", "-", "*", "=", "!=",
-                        "<", "<=", ">", ">=", "and", "or", "not")
+                        "<", "<=", ">", ">=", "and", "or", "not", "&&", "||", "!")
                 j = i + 1
                 while j <= n && isdigit(src[j]); j += 1; end
                 push!(tokens, src[i:j-1]); i = j
@@ -155,8 +155,12 @@ _pk(p::_InfixParserImpl) = p.pos <= length(p.toks) ? p.toks[p.pos] : ""
 _nx(p::_InfixParserImpl) = (t = _pk(p); p.pos += 1; t)
 _ex(p::_InfixParserImpl, e) = (t = _nx(p); t == e || error("Expected '$e' got '$t'"); t)
 
+# `&&` / `||` / `!` / `==` are Julia's spellings (what `rulenode2expr` prints for SyGuS `and` / `or` / `not` / `=`);
+# without them a candidate such as `ifelse(x >= 0 && y <= -1, …)` failed to parse (2026-10-03).
 const _INFIX_OPS = Dict(
     "or"  => (1, "or"),   "and" => (2, "and"),
+    "||"  => (1, "or"),   "&&"  => (2, "and"),
+    "=="  => (3, "="),
     "="   => (3, "="),    "!="  => (3, "distinct"),
     "<"   => (3, "<"),    "<="  => (3, "<="),
     ">"   => (3, ">"),    ">="  => (3, ">="),
@@ -177,7 +181,7 @@ function _infix_parse_expr(p::_InfixParserImpl, min_prec::Int=0)::String
 end
 
 _infix_parse_unary(p::_InfixParserImpl) =
-    _pk(p) == "not" ? (_nx(p); "(not $(_infix_parse_primary(p)))") : _infix_parse_primary(p)
+    _pk(p) in ("not", "!") ? (_nx(p); "(not $(_infix_parse_primary(p)))") : _infix_parse_primary(p)
 
 function _infix_parse_primary(p::_InfixParserImpl)::String
     t = _pk(p)
@@ -295,6 +299,8 @@ _ex_sym(p::_SymbolicParserImpl, e) = (t = _nx_sym(p); t == e || error("Expected 
 # Operator precedence and SMT names (same as infix parser)
 const _SYMBOLIC_OPS = Dict(
     "or"  => (1, "or", :bool),    "and" => (2, "and", :bool),
+    "||"  => (1, "or", :bool),    "&&"  => (2, "and", :bool),   # Julia spellings, as for the infix parser
+    "=="  => (3, "=", :bool),
     "="   => (3, "=", :bool),     "!="  => (3, "distinct", :bool),
     "<"   => (3, "<", :bool),     "<="  => (3, "<=", :bool),
     ">"   => (3, ">", :bool),     ">="  => (3, ">=", :bool),
@@ -328,7 +334,7 @@ function _symbolic_parse_expr_typed(p::_SymbolicParserImpl, min_prec::Int=0)::Ty
 end
 
 function _symbolic_parse_unary_typed(p::_SymbolicParserImpl)::TypedExpr
-    if _pk_sym(p) == "not"
+    if _pk_sym(p) in ("not", "!")
         _nx_sym(p)
         arg = _symbolic_parse_primary_typed(p)
         # 'not' expects Bool; coerce if needed

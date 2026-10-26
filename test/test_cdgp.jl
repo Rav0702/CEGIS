@@ -73,9 +73,12 @@ _call_rule(grammar, op::Symbol) =
         igt = _call_rule(grammar, :>)
         iif = _call_rule(grammar, :ifelse)
 
-        # Empty test set ⇒ empty case vector (lexicase falls back to random).
+        # With `parsimony` (the default) the vector is one loss per test plus a final size case, so an empty test
+        # set leaves only the size case. Without parsimony it is empty (lexicase falls back to random).
         wrong = CEGIS.GeneticSearch.RuleNodeGenome(RuleNode(ix0), grammar, :Expr)
-        @test Arborist.evaluate_cases(wrong, evaluator) == Float64[]
+        @test Arborist.evaluate_cases(wrong, evaluator) == [Float64(length(wrong.tree))]
+        lean = CEGIS.GeneticSearch.CDGPEvaluator(spec, grammar, :Expr, 4; parsimony = false)
+        @test Arborist.evaluate_cases(wrong, lean) == Float64[]
 
         # Grow the test set to one counterexample via the scalar path.
         Arborist.evaluate_genome(wrong, evaluator)
@@ -84,8 +87,9 @@ _call_rule(grammar, op::Symbol) =
 
         # The wrong genome `x0` fails the max counterexample.
         cv_wrong = Arborist.evaluate_cases(wrong, evaluator)
-        @test length(cv_wrong) == length(evaluator.test_cases)
-        @test any(==(1.0), cv_wrong)
+        @test length(cv_wrong) == length(evaluator.test_cases) + 1
+        @test any(==(1.0), cv_wrong[1:end-1])
+        @test cv_wrong[end] == length(wrong.tree)
 
         # The correct genome passes every accumulated test (all zero losses).
         correct = CEGIS.GeneticSearch.RuleNodeGenome(
@@ -96,13 +100,51 @@ _call_rule(grammar, op::Symbol) =
             ]),
             grammar, :Expr)
         cv_correct = Arborist.evaluate_cases(correct, evaluator)
-        @test length(cv_correct) == length(evaluator.test_cases)
-        @test all(==(0.0), cv_correct)
+        @test length(cv_correct) == length(evaluator.test_cases) + 1
+        @test all(==(0.0), cv_correct[1:end-1])
+        @test cv_correct[end] == length(correct.tree)
 
         # Purity: evaluate_cases must not issue Z3 queries or grow the test set.
         @test evaluator.verifications == verifs
         @test length(evaluator.test_cases) == 1
         @test evaluator.solved === nothing
+    end
+
+    @testset "in-process vs subprocess verification parity (max2)" begin
+        spec_path = find_spec_file("max2_simple")
+        spec = CEGIS.CEXGeneration.parse_spec_from_file(spec_path)
+        grammar = CEGIS.build_grammar_from_spec(spec_path)
+
+        ix0 = _var_rule(grammar, :x0)
+        ix1 = _var_rule(grammar, :x1)
+        igt = _call_rule(grammar, :>)
+        iif = _call_rule(grammar, :ifelse)
+
+        # max2 is inside the in-process scope, so the warm solver must be built.
+        e_ip = CEGIS.GeneticSearch.CDGPEvaluator(spec, grammar, :Expr, 4)
+        @test e_ip.cex_solver !== nothing
+        # Force the subprocess path on a second evaluator.
+        e_sub = CEGIS.GeneticSearch.CDGPEvaluator(spec, grammar, :Expr, 4)
+        e_sub.cex_solver = nothing
+
+        for e in (e_ip, e_sub)
+            wrong = CEGIS.GeneticSearch.RuleNodeGenome(RuleNode(ix0), grammar, :Expr)
+            @test Arborist.evaluate_genome(wrong, e) >= 1.0
+            @test length(e.test_cases) == 1
+            # Both paths must produce a spec-consistent counterexample test.
+            io = e.test_cases[1]
+            @test io.out == max(io.in[:x0], io.in[:x1])
+
+            correct = CEGIS.GeneticSearch.RuleNodeGenome(
+                RuleNode(iif, [
+                    RuleNode(igt, [RuleNode(ix0), RuleNode(ix1)]),
+                    RuleNode(ix0),
+                    RuleNode(ix1),
+                ]),
+                grammar, :Expr)
+            @test Arborist.evaluate_genome(correct, e) == 0.0
+            @test e.solved !== nothing
+        end
     end
 
     @testset "run_cdgp end-to-end with lexicase (max2)" begin

@@ -45,7 +45,12 @@ function _z3_exec(query::String)::Tuple{String,Int,String}
         out = IOBuffer()
         err = IOBuffer()
         # ignorestatus: don't throw on non-zero exit code (Z3 exits 1 for unsat)
-        proc = run(pipeline(ignorestatus(`z3 $tmp`); stdout=out, stderr=err); wait=true)
+        t0 = time_ns()
+        proc = try
+            run(pipeline(ignorestatus(`z3 $tmp`); stdout=out, stderr=err); wait=true)
+        finally
+            _z3_count!(:subprocess, t0)
+        end
         result  = strip(String(take!(out)))
         err_msg = strip(String(take!(err)))
 
@@ -62,7 +67,8 @@ end
 """
 Run z3 binary on a query string, return stdout as a String.
 Writes to a temp file to avoid shell quoting issues on Windows.
-On error, returns "unsat" status to allow execution to continue.
+A non-zero exit without a sat/unsat verdict raises; empty output makes the
+caller (`verify_query`) report `:unknown`. A failed run is never read as `unsat`.
 """
 function _z3_run(query::String)::String
     result, exitcode, err_msg = _z3_exec(query)

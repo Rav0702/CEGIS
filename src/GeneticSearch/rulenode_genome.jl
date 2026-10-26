@@ -1,4 +1,16 @@
 """
+    _synth_context_type(spec) -> Symbol
+
+SMT context a candidate body is converted in: `:bool` for a **predicate**
+synth-fun (return sort `Bool`, e.g. the CDGP paper's `IsSorted`/`IsSeries`),
+`:int` otherwise. Converting a predicate in `:int` context would wrap the body
+in a Bool→Int coercion and emit an ill-sorted query, so every conversion site
+derives this from the spec instead of assuming.
+"""
+_synth_context_type(spec)::Symbol =
+    (!isempty(spec.synth_funs) && spec.synth_funs[1].sort == "Bool") ? :bool : :int
+
+"""
     rulenode_genome.jl
 
 `RuleNodeGenome` — an Arborist genome backed by a HerbCore `RuleNode`.

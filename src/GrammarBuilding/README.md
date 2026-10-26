@@ -17,7 +17,7 @@ GrammarBuilding provides a declarative, configuration-driven approach to constru
 The module exports reusable operation sets for common synthesis domains:
 
 - **BASE_OPERATIONS** — Default operations for general integer arithmetic synthesis
-  - Constants: 0, 1, 2, -1
+  - Constants: 0 and 1 plus the spec's integers (the set's `:constants` entry is not used)
   - Binary arithmetic: +, -, *
   - Comparisons: <, >, <=, >=, ==
   - Logical operators: &&, ||, !

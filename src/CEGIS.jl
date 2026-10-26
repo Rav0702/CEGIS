@@ -19,6 +19,7 @@ include("IteratorConfig/IteratorConfig.jl") # Iterator configuration
 include("counterexample.jl")
 include("oracle_synth.jl")     # Oracle-driven CEGIS synthesis loop
 include("GeneticSearch/GeneticSearch.jl") # Z3-guided genetic synthesis POC (uses Arborist)
+include("recipe_iterator.jl")  # non-GP reference: CEGIS over the spec's answer recipes
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
@@ -55,6 +56,9 @@ export
     run_synthesis,
     synth_with_oracle,
     build_grammar_from_spec,
+    RecipeIterator,
+    run_recipe_cegis,
+    notify_counterexample!,
     check_desired_solution,
 
     # Counterexample management

@@ -12,3 +12,16 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Benchmark harness: local Python env (incl. exported OS root certs) and run outputs
+bench/.venv/
+results/
+
+# Python bytecode caches (bench/, scripts/)
+__pycache__/
+
+# Kept in the private docs repository ../CEGIS-docs/ (github.com/Rav0702/cegis-docs); these paths are
+# directory junctions into it: design documents, the thesis plan, and the scripts the final paper does not use
+docs/
+spec_knowledge/
+scripts/attic/

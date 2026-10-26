@@ -138,25 +138,6 @@ function create_oracle(factory::IOExampleOracleFactory, spec::Any, grammar::Abst
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Semantic SMT Oracle Factory (Legacy)
-# ─────────────────────────────────────────────────────────────────────────────
-
-"""
-    struct SemanticSMTOracleFactory <: AbstractOracleFactory
-"""
-struct SemanticSMTOracleFactory <: AbstractOracleFactory end
-
-"""
-    create_oracle(factory::SemanticSMTOracleFactory, spec::Spec, grammar::AbstractGrammar) :: AbstractOracle
-
-Create a legacy SemanticSMTOracle.
-"""
-function create_oracle(factory::SemanticSMTOracleFactory, spec::Any, grammar::AbstractGrammar)
-    # This will create a SemanticSMTOracle once it's imported/defined
-    error("SemanticSMTOracle not yet implemented as factory. Available in next phase.")
-end
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Default factory selection
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -228,6 +228,12 @@ function synth_with_oracle(
         # it gets everything from oracle.spec. Passing nothing as placeholder.
         cx = extract_counterexample(oracle, nothing, candidate_program)
 
+        if cx === nothing && !candidate_verified(oracle)
+            # The oracle could not decide (solver unknown or conversion error): not a proof. Until
+            # 2026-10-03 this branch fell through to SUCCESS, and wrong programs were accepted.
+            println("[enum=$num_enum] oracle could not verify this candidate; skipped")
+            continue
+        end
         if cx === nothing
             println("[enum=$num_enum] SUCCESS: Found candidate satisfying all examples!")
             println("[enum=$num_enum] Candidate: $(rulenode2expr(candidate_program, grammar))")
@@ -237,6 +243,7 @@ function synth_with_oracle(
 
         push!(counterexamples, cx)
         push!(problem.spec, IOExample(cx.input, cx.expected_output))
+        notify_counterexample!(iterator, cx)   # no-op except for counterexample-driven iterators
         iter += 1
         println("[enum=$num_enum] Oracle counterexample: input=$(cx.input), expected=$(cx.expected_output)")
         println("[iter=$iter] enum=$num_enum, Added IO counterexample, spec size now=$(length(problem.spec))")
